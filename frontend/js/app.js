@@ -187,6 +187,25 @@ const CONTROL_PAIRS = [
   { inputId: 'pasoTiempo_input', sliderId: 'pasoTiempo_slider', decimals: 3 }
 ];
 
+// ============================================================================
+// TEMPORIZADOR PARA ACTUALIZACIÓN EN VIVO (REACTIVA)
+// ============================================================================
+let debounceSimulacionTimer = null;
+
+/**
+ * Ejecuta la simulación de forma reactiva en vivo con un retraso mínimo de debounce
+ * para que las gráficas y métricas se actualicen inmediatamente al deslizar sliders
+ * o cambiar valores numéricos sin esperar a presionar Enter ni pulsar ningún botón.
+ * 
+ * @param {number} [delayMs=40] Retardo en milisegundos para suavizar la tasa de refresco
+ */
+function ejecutarSimulacionEnVivo(delayMs = 40) {
+  clearTimeout(debounceSimulacionTimer);
+  debounceSimulacionTimer = setTimeout(() => {
+    ejecutarSimulacion();
+  }, delayMs);
+}
+
 /**
  * Inicializa la sincronización inmediata en tiempo real entre sliders e inputs numéricos.
  */
@@ -199,16 +218,17 @@ function configurarSincronizacionControles() {
 
     if (!inputEl || !sliderEl) return;
 
-    // Al deslizar el slider -> actualizar input numérico
+    // Al deslizar el slider -> actualizar input numérico y refrescar gráficas en vivo
     sliderEl.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
       inputEl.value = decimals > 0 ? val.toFixed(decimals) : Math.round(val);
       if (presetSelect && presetSelect.value !== 'custom') {
         presetSelect.value = 'custom';
       }
+      ejecutarSimulacionEnVivo(30);
     });
 
-    // Al modificar el input numérico -> actualizar slider
+    // Al modificar el input numérico -> actualizar slider y refrescar gráficas en vivo
     inputEl.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
       if (!isNaN(val)) {
@@ -216,8 +236,18 @@ function configurarSincronizacionControles() {
         if (presetSelect && presetSelect.value !== 'custom') {
           presetSelect.value = 'custom';
         }
+        ejecutarSimulacionEnVivo(60);
       }
     });
+  });
+
+  // Sincronización en vivo de campos de texto (nombres de especies y ecosistema)
+  const camposTexto = ['input-ecosystem-name', 'input-prey-name', 'input-predator-name', 'nombreEcosistema', 'nombrePresa', 'nombreDepredador'];
+  camposTexto.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => ejecutarSimulacionEnVivo(120));
+    }
   });
 }
 

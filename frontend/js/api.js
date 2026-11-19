@@ -18,7 +18,9 @@
 
 import { normalizarParametros, cantidadConservada, calcularEstadisticas } from './mockRk4.js';
 
-export const API_BASE_URL = 'http://localhost:8080/api/v1';
+export const API_BASE_URL = window.location.protocol === 'https:'
+  ? (window.ECOFLUX_API_URL || 'https://ecoflux-backend.onrender.com/api/v1')
+  : 'http://localhost:8080/api/v1';
 const DEFAULT_TIMEOUT_MS = 3500;
 
 /**
