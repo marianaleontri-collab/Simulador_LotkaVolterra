@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoFlux — Dinámica de Ecosistemas con EDOs</title>
+
+  <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            prey: '#10B981',
+            predator: '#F43F5E',
+            eq: '#F59E0B',
+            slateDark: '#0F172A',
+            slateCard: '#1E293B',
+            slateBorder: '#334155',
+            slateLight: '#F8FAFC',
+            slateLightCard: '#FFFFFF',
+            slateLightBorder: '#E2E8F0',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- KaTeX CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Chart.js 4 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Estilos Maestros -->
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body class="bg-slate-950 overflow-hidden select-none">
+
+  <!-- Barra de Progreso Superior -->
+  <div id="progress-bar-container">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- Contenedor Maestro Viewport 16:9 -->
+  <div id="presentation-viewport">
+    <main class="presentation-stage">
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 1: Portada de Impacto (Oscuro #0F172A)                   -->
+      <!-- =================================================================== -->
+      <section class="slide slide-dark relative flex flex-col justify-between" data-slide="1">
+        <!-- Fondo animado con ondas SVG cruzándose -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden opacity-35">
+          <svg class="absolute w-[200%] h-full wave-prey" viewBox="0 0 1200 400" preserveAspectRatio="none">
+            <path d="M0,200 C300,100 600,300 900,180 C1200,60 1500,280 1800,200 L1800,400 L0,400 Z" fill="none" stroke="#10B981" stroke-width="3.5" opacity="0.6"/>
+          </svg>
+          <svg class="absolute w-[200%] h-full wave-predator" viewBox="0 0 1200 400" preserveAspectRatio="none">
+            <path d="M0,220 C300,310 600,110 900,240 C1200,340 1500,120 1800,220 L1800,400 L0,400 Z" fill="none" stroke="#F43F5E" stroke-width="3" opacity="0.55"/>
+          </svg>
+        </div>
+
+        <!-- Etiqueta superior -->
+        <div class="relative z-10">
+          <span class="tag-pill bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <i class="fa-solid fa-atom"></i> MODELADO MATEMÁTICO DE ECOSISTEMAS
+          </span>
+        </div>
+
+        <!-- Centro: Título Gigante e Ícono -->
+        <div class="relative z-10 flex flex-col items-center justify-center my-auto text-center">
+          <div class="flex items-center justify-center gap-5 mb-4">
+            <i class="fa-solid fa-wave-square text-emerald-400 text-5xl md:text-6xl drop-shadow-[0_0_20px_rgba(16,185,129,0.5)]"></i>
+            <h1 class="text-6xl md:text-8xl font-display font-bold tracking-tight text-white drop-shadow-lg">
+              Eco<span class="text-emerald-400">Flux</span>
+            </h1>
+          </div>
+          <p class="text-2xl md:text-3xl text-slate-300 font-sans font-light tracking-wide max-w-2xl">
+            Ecuaciones Diferenciales de <span class="font-medium text-white">Lotka-Volterra</span> en acción
+          </p>
+        </div>
+
+        <!-- Pie de página discreto con autores -->
+        <div class="relative z-10 border-t border-slate-800/80 pt-4 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 font-mono">
+          <span>Juan Diego Bautista Murcia • Juan Pablo Beltran Bejarano • Daniel Felipe Cagua Roldan • Mariana Leon Triana</span>
+          <span class="text-emerald-400/90 font-medium mt-1 md:mt-0">Ecuaciones Diferenciales &bull; UDEC 2026</span>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 2: ¿Para qué sirve EcoFlux? (Claro #F8FAFC)              -->
+      <!-- =================================================================== -->
+      <section class="slide slide-light" data-slide="2">
+        <header class="flex flex-col gap-1">
+          <span class="text-xs font-mono font-semibold tracking-wider text-sky-600 uppercase">Utilidad y Aplicación</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-slate-900">¿Para qué sirve EcoFlux?</h2>
+        </header>
+
+        <!-- 3 Tarjetas horizontales minimalistas -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+          <!-- Tarjeta 1 -->
+          <div class="card-surface p-8 rounded-2xl flex flex-col items-start gap-4 hover:border-emerald-500/40 transition-all duration-300">
+            <div class="w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-2xl">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h3 class="text-2xl font-display font-bold text-slate-900">Predecir ciclos</h3>
+            <p class="text-slate-600 text-lg leading-snug">
+              Anticipa auges y caídas poblacionales.
+            </p>
+          </div>
+
+          <!-- Tarjeta 2 -->
+          <div class="card-surface p-8 rounded-2xl flex flex-col items-start gap-4 hover:border-rose-500/40 transition-all duration-300">
+            <div class="w-14 h-14 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600 text-2xl">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-2xl font-display font-bold text-slate-900">Detectar extinciones</h3>
+            <p class="text-slate-600 text-lg leading-snug">
+              Alerta colapsos antes que ocurran.
+            </p>
+          </div>
+
+          <!-- Tarjeta 3 -->
+          <div class="card-surface p-8 rounded-2xl flex flex-col items-start gap-4 hover:border-sky-500/40 transition-all duration-300">
+            <div class="w-14 h-14 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-600 text-2xl">
+              <i class="fa-solid fa-flask"></i>
+            </div>
+            <h3 class="text-2xl font-display font-bold text-slate-900">Laboratorio virtual</h3>
+            <p class="text-slate-600 text-lg leading-snug">
+              Experimenta escenarios sin alterar ecosistemas.
+            </p>
+          </div>
+        </div>
+
+        <footer class="text-xs text-slate-400 font-mono flex justify-between">
+          <span>EcoFlux &bull; Modelado de Ecosistemas</span>
+          <span>Diapositiva 2</span>
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 3: El Corazón Matemático (Claro #F8FAFC)                 -->
+      <!-- =================================================================== -->
+      <section class="slide slide-light" data-slide="3">
+        <header>
+          <span class="text-xs font-mono font-semibold tracking-wider text-sky-600 uppercase">Fundamento Teórico</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-slate-900">Dos EDOs No Lineales Acopladas</h2>
+        </header>
+
+        <div class="grid grid-cols-12 gap-8 my-auto items-center">
+          <!-- 60% Izquierda: Ecuaciones gigantes -->
+          <div class="col-span-12 md:col-span-7 flex flex-col gap-6">
+            <!-- Ecuación Presas -->
+            <div class="card-surface p-6 rounded-2xl border-l-4 border-l-emerald-500 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-mono font-bold text-emerald-600 uppercase tracking-wider block mb-1">Presas (x)</span>
+                <div class="text-3xl md:text-4xl font-mono text-slate-900">
+                  $$\frac{d\color{#10B981}{x}}{dt} = \alpha \color{#10B981}{x} - \beta \color{#10B981}{x}\color{#F43F5E}{y}$$
+                </div>
+              </div>
+              <span class="text-2xl text-emerald-500"><i class="fa-solid fa-seedling"></i></span>
+            </div>
+
+            <!-- Ecuación Depredadores -->
+            <div class="card-surface p-6 rounded-2xl border-l-4 border-l-rose-500 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-mono font-bold text-rose-600 uppercase tracking-wider block mb-1">Depredadores (y)</span>
+                <div class="text-3xl md:text-4xl font-mono text-slate-900">
+                  $$\frac{d\color{#F43F5E}{y}}{dt} = \delta \color{#10B981}{x}\color{#F43F5E}{y} - \gamma \color{#F43F5E}{y}$$
+                </div>
+              </div>
+              <span class="text-2xl text-rose-500"><i class="fa-solid fa-paw"></i></span>
+            </div>
+
+            <!-- 3 Etiquetas cortas -->
+            <div class="flex flex-wrap gap-3 mt-1">
+              <span class="tag-pill bg-slate-200/80 text-slate-700"><i class="fa-solid fa-check"></i> 1.er Orden</span>
+              <span class="tag-pill bg-slate-200/80 text-slate-700"><i class="fa-solid fa-clock"></i> Autónomas</span>
+              <span class="tag-pill bg-sky-100 text-sky-800 border border-sky-300"><i class="fa-solid fa-link"></i> No Lineales (término xy)</span>
+            </div>
+          </div>
+
+          <!-- 40% Derecha: Ilustración Liebre y Lince con flechas circulares -->
+          <div class="col-span-12 md:col-span-5 flex flex-col items-center justify-center">
+            <div class="card-surface p-6 rounded-2xl w-full flex flex-col items-center relative overflow-hidden">
+              <svg viewBox="0 0 300 220" class="w-full max-w-xs h-auto">
+                <!-- Flechas circulares de retroalimentación -->
+                <path d="M 90,80 A 60,60 0 0,1 210,80" fill="none" stroke="#10B981" stroke-width="3" stroke-dasharray="4,4" marker-end="url(#arrow-green)" />
+                <path d="M 210,140 A 60,60 0 0,1 90,140" fill="none" stroke="#F43F5E" stroke-width="3" stroke-dasharray="4,4" marker-end="url(#arrow-red)" />
+                
+                <defs>
+                  <marker id="arrow-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#10B981" />
+                  </marker>
+                  <marker id="arrow-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#F43F5E" />
+                  </marker>
+                </defs>
+
+                <!-- Nodo Liebre (Presa x) -->
+                <g transform="translate(60, 110)">
+                  <circle r="36" fill="#10B981" fill-opacity="0.15" stroke="#10B981" stroke-width="2.5" />
+                  <text text-anchor="middle" y="-6" font-family="Space Grotesk" font-weight="bold" font-size="14" fill="#059669">PRESA</text>
+                  <text text-anchor="middle" y="16" font-family="JetBrains Mono" font-weight="bold" font-size="20" fill="#10B981">x(t)</text>
+                </g>
+
+                <!-- Término de Interacción xy -->
+                <g transform="translate(150, 110)">
+                  <rect x="-24" y="-14" width="48" height="28" rx="14" fill="#0284C7" />
+                  <text text-anchor="middle" y="5" font-family="JetBrains Mono" font-weight="bold" font-size="13" fill="#FFFFFF">xy</text>
+                </g>
+
+                <!-- Nodo Lince (Depredador y) -->
+                <g transform="translate(240, 110)">
+                  <circle r="36" fill="#F43F5E" fill-opacity="0.15" stroke="#F43F5E" stroke-width="2.5" />
+                  <text text-anchor="middle" y="-6" font-family="Space Grotesk" font-weight="bold" font-size="14" fill="#E11D48">DEPREDADOR</text>
+                  <text text-anchor="middle" y="16" font-family="JetBrains Mono" font-weight="bold" font-size="20" fill="#F43F5E">y(t)</text>
+                </g>
+              </svg>
+              <span class="text-xs font-mono text-slate-500 mt-2">Interacción biológica depredador-presa</span>
+            </div>
+          </div>
+        </div>
+
+        <footer class="text-xs text-slate-400 font-mono flex justify-between">
+          <span>Sistema Autónomo en el Plano</span>
+          <span>Diapositiva 3</span>
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 4: Significado de los 4 Parámetros (Claro #F8FAFC)       -->
+      <!-- =================================================================== -->
+      <section class="slide slide-light" data-slide="4">
+        <header>
+          <span class="text-xs font-mono font-semibold tracking-wider text-sky-600 uppercase">Variables del Modelo</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-slate-900">Significado de los 4 Parámetros</h2>
+        </header>
+
+        <!-- Cuadrícula limpia 2x2 -->
+        <div class="grid grid-cols-2 gap-6 my-auto max-w-4xl mx-auto w-full">
+          <!-- Alfa -->
+          <div class="card-surface p-6 rounded-2xl flex items-center gap-6 border-l-4 border-l-emerald-500">
+            <span class="text-5xl font-mono font-bold text-emerald-600 w-16 text-center">&alpha;</span>
+            <div>
+              <div class="text-emerald-500 text-lg mb-1"><i class="fa-solid fa-seedling"></i></div>
+              <p class="text-xl font-display font-semibold text-slate-900">Natalidad natural de presas.</p>
+            </div>
+          </div>
+
+          <!-- Beta -->
+          <div class="card-surface p-6 rounded-2xl flex items-center gap-6 border-l-4 border-l-rose-500">
+            <span class="text-5xl font-mono font-bold text-rose-600 w-16 text-center">&beta;</span>
+            <div>
+              <div class="text-rose-500 text-lg mb-1"><i class="fa-solid fa-crosshairs"></i></div>
+              <p class="text-xl font-display font-semibold text-slate-900">Tasa de caza o depredación.</p>
+            </div>
+          </div>
+
+          <!-- Delta -->
+          <div class="card-surface p-6 rounded-2xl flex items-center gap-6 border-l-4 border-l-sky-600">
+            <span class="text-5xl font-mono font-bold text-sky-600 w-16 text-center">&delta;</span>
+            <div>
+              <div class="text-sky-600 text-lg mb-1"><i class="fa-solid fa-bolt"></i></div>
+              <p class="text-xl font-display font-semibold text-slate-900">Eficiencia reproductiva del depredador.</p>
+            </div>
+          </div>
+
+          <!-- Gamma -->
+          <div class="card-surface p-6 rounded-2xl flex items-center gap-6 border-l-4 border-l-amber-500">
+            <span class="text-5xl font-mono font-bold text-amber-500 w-16 text-center">&gamma;</span>
+            <div>
+              <div class="text-amber-500 text-lg mb-1"><i class="fa-solid fa-arrow-trend-down"></i></div>
+              <p class="text-xl font-display font-semibold text-slate-900">Mortalidad natural del depredador.</p>
+            </div>
+          </div>
+        </div>
+
+        <footer class="text-xs text-slate-400 font-mono flex justify-between">
+          <span>Constantes Positivas &bull; (&alpha;, &beta;, &delta;, &gamma; &gt; 0)</span>
+          <span>Diapositiva 4</span>
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 5: Dinámica en el Tiempo (Oscuro #0F172A)                -->
+      <!-- =================================================================== -->
+      <section class="slide slide-dark" data-slide="5">
+        <header class="flex items-center justify-between">
+          <div>
+            <span class="text-xs font-mono font-semibold tracking-wider text-emerald-400 uppercase">Evolución Temporal</span>
+            <h2 class="text-4xl md:text-5xl font-display font-bold text-white">Oscilaciones Acopladas</h2>
+          </div>
+          <div class="flex items-center gap-4 text-xs font-mono">
+            <span class="flex items-center gap-1.5 text-emerald-400"><span class="w-3 h-3 rounded-full bg-emerald-400"></span> Presas (x)</span>
+            <span class="flex items-center gap-1.5 text-rose-400"><span class="w-3 h-3 rounded-full bg-rose-400"></span> Depredadores (y)</span>
+          </div>
+        </header>
+
+        <!-- Gráfica Chart.js ocupando 75% del área -->
+        <div class="w-full flex-1 min-h-0 my-3 relative card-surface p-4 rounded-2xl">
+          <canvas id="chart-timeseries"></canvas>
+        </div>
+
+        <!-- 3 anotaciones breves al pie -->
+        <footer class="flex items-center justify-between border-t border-slate-800 pt-3 text-sm font-mono text-slate-400">
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-400 font-bold">1. Crecen presas</span>
+            <span class="text-slate-600">&rarr;</span>
+            <span class="text-rose-400 font-bold">2. Auge depredador</span>
+            <span class="text-slate-600">&rarr;</span>
+            <span class="text-amber-400 font-bold">3. Caída y rebote</span>
+          </div>
+          <span class="text-xs text-slate-500">Desfase temporal cíclico permanente</span>
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 6: Puntos de Equilibrio y Estabilidad (Claro #F8FAFC)     -->
+      <!-- =================================================================== -->
+      <section class="slide slide-light" data-slide="6">
+        <header>
+          <span class="text-xs font-mono font-semibold tracking-wider text-sky-600 uppercase">Análisis Cualitativo</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-slate-900">Puntos de Equilibrio y Estabilidad</h2>
+        </header>
+
+        <!-- Comparación en 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-auto relative">
+          <!-- Columna Izquierda: E0 Extinción -->
+          <div class="card-surface p-8 rounded-2xl border-t-4 border-t-rose-500 flex flex-col items-center text-center gap-3">
+            <div class="w-14 h-14 rounded-full bg-rose-500/15 flex items-center justify-center text-rose-600 text-2xl mb-1">
+              <i class="fa-solid fa-ban"></i>
+            </div>
+            <div class="text-4xl font-mono font-bold text-slate-900">
+              $$E_0 = (0, 0)$$
+            </div>
+            <h3 class="text-2xl font-display font-bold text-rose-600 mt-2">Extinción Total</h3>
+            <span class="tag-pill bg-rose-100 text-rose-800 border border-rose-200">
+              Punto silla (inestable)
+            </span>
+          </div>
+
+          <!-- Columna Derecha: E1 Coexistencia -->
+          <div class="card-surface p-8 rounded-2xl border-t-4 border-t-amber-500 flex flex-col items-center text-center gap-3">
+            <div class="w-14 h-14 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-500 text-2xl mb-1">
+              <i class="fa-solid fa-scale-balanced"></i>
+            </div>
+            <div class="text-4xl font-mono font-bold text-slate-900">
+              $$E_1 = \left(\frac{\gamma}{\delta},\; \frac{\alpha}{\beta}\right)$$
+            </div>
+            <h3 class="text-2xl font-display font-bold text-amber-600 mt-2">Coexistencia</h3>
+            <span class="tag-pill bg-amber-100 text-amber-800 border border-amber-200">
+              Centro (estabilidad neutra)
+            </span>
+          </div>
+        </div>
+
+        <!-- Dato clave abajo (1 línea) -->
+        <footer class="card-surface p-4 rounded-xl border border-sky-200 bg-sky-50 text-center text-base font-mono text-sky-900">
+          Cuando $\frac{dx}{dt} = 0$ y $\frac{dy}{dt} = 0$, las poblaciones se mantienen constantes.
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 7: Retrato de Fase (Oscuro #0F172A)                      -->
+      <!-- =================================================================== -->
+      <section class="slide slide-dark" data-slide="7">
+        <header>
+          <span class="text-xs font-mono font-semibold tracking-wider text-sky-400 uppercase">Espacio de Estados</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-white">El Retrato de Fase</h2>
+        </header>
+
+        <div class="grid grid-cols-12 gap-8 my-auto flex-1 min-h-0 items-center">
+          <!-- 65% Izquierda: Gráfica animada Chart.js órbita cerrada -->
+          <div class="col-span-12 md:col-span-8 h-full min-h-[300px] card-surface p-4 rounded-2xl relative">
+            <canvas id="chart-phase"></canvas>
+          </div>
+
+          <!-- 35% Derecha: Texto minimalista y ecuación compacta -->
+          <div class="col-span-12 md:col-span-4 flex flex-col justify-center gap-6">
+            <div class="card-surface p-6 rounded-2xl">
+              <span class="text-xs font-mono text-sky-400 uppercase tracking-wider block mb-2">Relación Directa</span>
+              <div class="text-2xl md:text-3xl font-mono text-white mb-2">
+                $$\frac{dy}{dx} = \frac{y(\delta x - \gamma)}{x(\alpha - \beta y)}$$
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3 font-sans">
+              <div class="card-surface p-4 rounded-xl flex items-center gap-3">
+                <i class="fa-solid fa-infinity text-sky-400 text-lg"></i>
+                <span class="text-slate-300 text-base font-medium">Sin variable tiempo $t$.</span>
+              </div>
+              <div class="card-surface p-4 rounded-xl flex items-center gap-3">
+                <i class="fa-solid fa-rotate text-emerald-400 text-lg"></i>
+                <span class="text-slate-300 text-base font-medium">Trayectoria cerrada = ciclo perpetuo.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="text-xs text-slate-500 font-mono flex justify-between border-t border-slate-800 pt-3">
+          <span>Órbitas periódicas en el plano $(x, y)$</span>
+          <span>Diapositiva 7</span>
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 8: RK4 vs Euler (Claro #F8FAFC)                          -->
+      <!-- =================================================================== -->
+      <section class="slide slide-light" data-slide="8">
+        <header>
+          <span class="text-xs font-mono font-semibold tracking-wider text-sky-600 uppercase">Integración Numérica</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-slate-900">¿Por qué Runge-Kutta (RK4)?</h2>
+        </header>
+
+        <!-- Comparación visual lado a lado con 2 gráficas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-auto">
+          <!-- Izquierda: Euler -->
+          <div class="card-surface p-6 rounded-2xl border-2 border-rose-500/70 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-2xl font-display font-bold text-slate-900">Método de Euler</h3>
+                <span class="text-sm font-mono text-rose-600 font-semibold">Error $O(h)$</span>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 text-lg">
+                <i class="fa-solid fa-xmark"></i>
+              </div>
+            </div>
+
+            <!-- Mini gráfica Euler -->
+            <div class="w-full h-44 relative bg-slate-50 rounded-xl p-2 border border-slate-200">
+              <canvas id="chart-euler"></canvas>
+            </div>
+
+            <p class="text-sm font-sans text-rose-700 font-semibold mt-3 text-center">
+              Espiral divergente (inestable).
+            </p>
+          </div>
+
+          <!-- Derecha: RK4 -->
+          <div class="card-surface p-6 rounded-2xl border-2 border-emerald-500/80 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-2xl font-display font-bold text-slate-900">Runge-Kutta (RK4)</h3>
+                <span class="text-sm font-mono text-emerald-600 font-semibold">Error $O(h^4)$</span>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg">
+                <i class="fa-solid fa-check"></i>
+              </div>
+            </div>
+
+            <!-- Mini gráfica RK4 -->
+            <div class="w-full h-44 relative bg-slate-50 rounded-xl p-2 border border-slate-200">
+              <canvas id="chart-rk4"></canvas>
+            </div>
+
+            <p class="text-sm font-sans text-emerald-700 font-semibold mt-3 text-center">
+              Órbita periódica cerrada (conservativa).
+            </p>
+          </div>
+        </div>
+
+        <footer class="text-xs text-slate-400 font-mono flex justify-between">
+          <span>Conservación de la invariante $V(x,y)$</span>
+          <span>Diapositiva 8</span>
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 9: ¿Cómo Funciona EcoFlux? (Claro #F8FAFC)               -->
+      <!-- =================================================================== -->
+      <section class="slide slide-light" data-slide="9">
+        <header>
+          <span class="text-xs font-mono font-semibold tracking-wider text-sky-600 uppercase">Arquitectura del Simulador</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-slate-900">¿Cómo Funciona EcoFlux?</h2>
+        </header>
+
+        <!-- 3 Nodos Conectados -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto max-w-5xl mx-auto w-full">
+          <!-- Paso 1 -->
+          <div class="card-surface p-6 rounded-2xl flex flex-col items-center text-center gap-3 relative border-t-4 border-t-sky-600">
+            <div class="w-14 h-14 rounded-2xl bg-sky-100 flex items-center justify-center text-sky-600 text-2xl">
+              <i class="fa-solid fa-sliders"></i>
+            </div>
+            <h3 class="text-2xl font-display font-bold text-slate-900">1. Configura</h3>
+            <p class="text-slate-600 text-base">
+              Ajusta especies, tasas y $\Delta t$.
+            </p>
+          </div>
+
+          <!-- Paso 2 -->
+          <div class="card-surface p-6 rounded-2xl flex flex-col items-center text-center gap-3 relative border-t-4 border-t-emerald-500">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 text-2xl">
+              <i class="fa-solid fa-microchip"></i>
+            </div>
+            <h3 class="text-2xl font-display font-bold text-slate-900">2. Resuelve</h3>
+            <p class="text-slate-600 text-base">
+              El motor RK4 integra las EDOs.
+            </p>
+          </div>
+
+          <!-- Paso 3 -->
+          <div class="card-surface p-6 rounded-2xl flex flex-col items-center text-center gap-3 relative border-t-4 border-t-amber-500">
+            <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 text-2xl">
+              <i class="fa-solid fa-chart-area"></i>
+            </div>
+            <h3 class="text-2xl font-display font-bold text-slate-900">3. Analiza</h3>
+            <p class="text-slate-600 text-base">
+              Explora curvas y retrato de fase.
+            </p>
+          </div>
+        </div>
+
+        <!-- Mockup estilizado de interfaz -->
+        <div class="card-surface p-3 rounded-2xl max-w-4xl mx-auto w-full flex items-center justify-between border border-slate-300 bg-slate-900 text-white px-6">
+          <div class="flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+            </div>
+            <span class="text-xs font-mono text-slate-400">ecoflux-simulador.app</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono text-emerald-400">
+            <i class="fa-solid fa-bolt"></i> Integrador RK4 60 FPS
+          </div>
+        </div>
+
+        <footer class="text-xs text-slate-400 font-mono flex justify-between">
+          <span>Flujo de integración en tiempo real</span>
+          <span>Diapositiva 9</span>
+        </footer>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- DIAPOSITIVA 10: Escenarios Reales y Demo en Vivo (Oscuro #0F172A)    -->
+      <!-- =================================================================== -->
+      <section class="slide slide-dark flex flex-col justify-between" data-slide="10">
+        <header class="text-center">
+          <span class="text-xs font-mono font-semibold tracking-wider text-emerald-400 uppercase">Casos de Estudio</span>
+          <h2 class="text-4xl md:text-5xl font-display font-bold text-white">Escenarios Reales</h2>
+        </header>
+
+        <!-- 3 Tarjetas compactas de escenarios -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
+          <!-- Caso 1 -->
+          <div class="card-surface p-6 rounded-2xl text-center flex flex-col items-center gap-2 hover:border-emerald-500 transition">
+            <i class="fa-solid fa-paw text-3xl text-emerald-400 mb-1"></i>
+            <h3 class="text-xl font-display font-bold text-white">Lince y Liebre</h3>
+            <span class="text-xs font-mono text-slate-400">Ciclo clásico</span>
+          </div>
+
+          <!-- Caso 2 -->
+          <div class="card-surface p-6 rounded-2xl text-center flex flex-col items-center gap-2 hover:border-sky-400 transition">
+            <i class="fa-solid fa-infinity text-3xl text-sky-400 mb-1"></i>
+            <h3 class="text-xl font-display font-bold text-white">Equilibrio Armónico</h3>
+            <span class="text-xs font-mono text-slate-400">Oscilación estable</span>
+          </div>
+
+          <!-- Caso 3 -->
+          <div class="card-surface p-6 rounded-2xl text-center flex flex-col items-center gap-2 hover:border-rose-500 transition">
+            <i class="fa-solid fa-skull-crossbones text-3xl text-rose-500 mb-1"></i>
+            <h3 class="text-xl font-display font-bold text-white">Borde de Extinción</h3>
+            <span class="text-xs font-mono text-slate-400">Sobredepredación</span>
+          </div>
+        </div>
+
+        <!-- Gran titular central para la Demo en Vivo -->
+        <a href="/" target="_self" class="card-surface p-8 rounded-3xl max-w-3xl mx-auto w-full text-center border-2 border-emerald-500/60 shadow-[0_0_35px_rgba(16,185,129,0.2)] hover:border-emerald-400 hover:scale-[1.02] transition block cursor-pointer group" title="Abrir EcoFlux: Guardián del Bioma">
+          <h2 class="text-4xl md:text-6xl font-display font-bold text-emerald-400 tracking-tight mb-2 group-hover:text-emerald-300 flex items-center justify-center gap-3">
+            <i class="fa-solid fa-gamepad text-3xl md:text-5xl text-emerald-400"></i>
+            Demostración en Vivo
+            <i class="fa-solid fa-arrow-up-right-from-square text-xl md:text-2xl opacity-70 group-hover:opacity-100"></i>
+          </h2>
+          <p class="text-lg md:text-xl text-slate-300 font-sans">
+            EcoFlux — De las ecuaciones a la simulación interactiva. ¡Clic aquí para jugar!
+          </p>
+        </a>
+
+        <footer class="text-xs text-slate-500 font-mono text-center border-t border-slate-800 pt-3">
+          ¡Gracias! Preguntas y discusión del modelo.
+        </footer>
+      </section>
+
+    </main>
+
+    <!-- Controles Discretos de Navegación (Esquina Inferior Derecha) -->
+    <nav class="nav-controls" aria-label="Controles de diapositivas">
+      <button id="btn-prev" class="nav-btn" title="Diapositiva anterior (Flecha Izquierda)" aria-label="Anterior">
+        <i class="fa-solid fa-chevron-left text-sm"></i>
+      </button>
+      <span id="slide-counter" class="slide-counter">1 / 10</span>
+      <button id="btn-next" class="nav-btn" title="Diapositiva siguiente (Flecha Derecha / Espacio)" aria-label="Siguiente">
+        <i class="fa-solid fa-chevron-right text-sm"></i>
+      </button>
+      <div class="w-[1px] h-4 bg-slate-600 mx-0.5"></div>
+      <button id="btn-fullscreen" class="nav-btn" title="Pantalla completa (F)" aria-label="Pantalla completa">
+        <i class="fa-solid fa-expand text-sm"></i>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Controlador Modular JS -->
+  <script type="module" src="./js/slides.js"></script>
+</body>
+</html>

@@ -1,1 +1,27 @@
+# Entorno y variables secretas
+.env
+*.env.local
+
+# Maven y compilacion
+target/
+*.class
+
+# Build de Vercel
+dist/
+.vercel/
+
+# IDEs y editores
 .idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Sistema y logs
+*.log
+.DS_Store
+Thumbs.db
+
+# Documentos academicos (en rama dedicada docs/marco-matematico-apa)
+docs/

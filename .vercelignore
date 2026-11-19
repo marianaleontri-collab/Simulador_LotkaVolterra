@@ -1,0 +1,10 @@
+src/
+target/
+pom.xml
+docker-compose.yml
+docs/
+.env
+.env.*
+*.log
+presentation_temp.html
+node_modules/

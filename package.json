@@ -1,0 +1,17 @@
+{
+  "name": "ecoflux-guardian-del-bioma",
+  "version": "1.0.0",
+  "description": "EcoFlux: Guardián del Bioma — Simulador y Presentación Dinámica Lotka-Volterra",
+  "scripts": {
+    "build": "node scripts/build-vercel.js"
+  },
+  "keywords": [
+    "lotka-volterra",
+    "simulacion",
+    "runge-kutta-4",
+    "ecoflux",
+    "udec"
+  ],
+  "author": "EcoFlux Team",
+  "license": "MIT"
+}
