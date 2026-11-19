@@ -3,13 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EcoFlux — Simulador Dinámico Lotka-Volterra</title>
-  
-  <!-- Google Fonts: Inter, Outfit & JetBrains Mono -->
+  <title>EcoFlux: Guardián del Bioma | Simulador Ecológico Lotka-Volterra</title>
+
+  <!-- Google Fonts: Outfit (títulos), Inter (cuerpo), JetBrains Mono (fórmulas y números) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -25,737 +28,890 @@
           colors: {
             brand: {
               50: '#f0fdf4',
+              400: '#34d399',
               500: '#10b981',
               600: '#059669',
+              900: '#064e3b',
+              950: '#022c22',
             },
             prey: {
               DEFAULT: '#10b981',
               light: '#34d399',
               dark: '#059669',
-              dim: 'rgba(16, 185, 129, 0.12)'
+              glow: 'rgba(16, 185, 129, 0.4)',
+              dim: 'rgba(16, 185, 129, 0.12)',
             },
             predator: {
               DEFAULT: '#f43f5e',
               light: '#fb7185',
               dark: '#e11d48',
-              dim: 'rgba(244, 63, 94, 0.12)'
+              glow: 'rgba(244, 63, 94, 0.4)',
+              dim: 'rgba(244, 63, 94, 0.12)',
+            },
+            energy: {
+              DEFAULT: '#38bdf8',
+              light: '#7dd3fc',
+              dark: '#0284c7',
+              glow: 'rgba(56, 189, 248, 0.4)',
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 4s ease-in-out infinite',
+            'slide-down': 'slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'radar-sweep': 'radarSweep 4s linear infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' },
+            },
+            slideDown: {
+              '0%': { transform: 'translateY(-100%)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            radarSweep: {
+              '0%': { transform: 'rotate(0deg)' },
+              '100%': { transform: 'rotate(360deg)' }
             }
           }
         }
       }
-    }
+    };
   </script>
 
-  <!-- Chart.js 4.x via CDN -->
+  <!-- Chart.js 4.4.x via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- KaTeX for crisp differential equations -->
+  <!-- KaTeX for pristine math rendering -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], throwOnError: false });"></script>
 
   <style>
-    /* Custom Scrollbar for sleek scientific dark look */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.7); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.9); }
+
+    /* Card glow & interaction effects */
+    .intervention-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    ::-webkit-scrollbar-track {
-      background: #020617;
+    .intervention-card:hover:not(.disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -4px rgba(14, 165, 233, 0.25);
     }
-    ::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 9999px;
+    .intervention-card:active:not(.disabled) {
+      transform: translateY(0);
+      scale: 0.98;
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
+    .intervention-card.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(0.5);
+    }
+    .card-active-glow {
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+      border-color: rgba(56, 189, 248, 0.9) !important;
     }
 
-    /* Range slider custom styling */
-    input[type=range] {
-      -webkit-appearance: none;
-      appearance: none;
-      background: #1e293b;
-      border-radius: 9999px;
-      height: 6px;
+    /* Modal transition */
+    .modal-backdrop {
+      transition: opacity 0.25s ease-out, visibility 0.25s ease-out;
     }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      height: 16px;
-      width: 16px;
-      border-radius: 50%;
-      background: #f8fafc;
-      border: 2px solid #0f172a;
-      cursor: pointer;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-      transition: transform 0.1s ease, background-color 0.1s ease;
-    }
-    input[type=range]::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-    }
-    .slider-prey::-webkit-slider-thumb {
-      background: #10b981 !important;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
-    }
-    .slider-predator::-webkit-slider-thumb {
-      background: #f43f5e !important;
-      box-shadow: 0 0 12px rgba(244, 63, 94, 0.7);
-    }
-    .slider-sim::-webkit-slider-thumb {
-      background: #6366f1 !important;
-      box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
-    }
-
-    /* Canvas sizing protection */
-    .chart-canvas-container {
-      position: relative;
-      width: 100%;
-      min-height: 320px;
-      height: 380px;
+    .modal-backdrop.hidden-modal {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-emerald-500/20 selection:text-emerald-300">
+
+<body class="bg-slate-950 text-slate-100 font-sans h-screen w-screen overflow-hidden flex flex-col select-none antialiased">
 
   <!-- ========================================================================= -->
-  <!-- BARRA SUPERIOR (HEADER)                                                   -->
+  <!-- 1. CABECERA SUPERIOR (NAVBAR)                                             -->
   <!-- ========================================================================= -->
-  <header class="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-4 lg:px-8 py-3 transition-colors">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-      
-      <!-- Brand & Title -->
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 via-teal-500 to-rose-500 p-[1.5px] shadow-lg shadow-emerald-500/10">
+  <header class="h-16 shrink-0 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between z-30">
+    
+    <!-- Logo & Biome Active Badge -->
+    <div class="flex items-center gap-3 sm:gap-4">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-2.5 group cursor-pointer" id="btn-brand-home" title="EcoFlux: Guardián del Bioma">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition">
           <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-            <i data-lucide="activity" class="w-5 h-5 text-emerald-400"></i>
+            <i class="fa-solid fa-seedling text-emerald-400 text-lg group-hover:scale-110 transition-transform"></i>
           </div>
         </div>
         <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-xl font-bold tracking-tight font-display bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-              EcoFlux
-            </h1>
-            <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              v1.0 RK4
+          <div class="flex items-center gap-2">
+            <span class="font-display font-extrabold text-xl tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">EcoFlux</span>
+            <span class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              Guardián del Bioma
             </span>
           </div>
-          <p class="text-xs text-slate-400 font-medium">Simulador Bio-Matemático Lotka-Volterra</p>
         </div>
       </div>
 
-      <!-- Presets & State Controls -->
-      <div class="flex items-center flex-wrap gap-2 sm:gap-3">
-        <!-- Preset Dropdown -->
-        <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 focus-within:border-emerald-500/50 transition">
-          <i data-lucide="layers" class="w-4 h-4 text-slate-400 mr-2 shrink-0"></i>
-          <label for="ecosystem-preset-select" class="sr-only">Ecosistema Preset</label>
-          <select id="ecosystem-preset-select" class="bg-transparent text-xs font-medium text-slate-200 focus:outline-none cursor-pointer pr-2">
-            <option value="savanna" class="bg-slate-900 text-slate-200">Sabana Africana (Equilibrado)</option>
-            <option value="boreal" class="bg-slate-900 text-slate-200">Bosque Boreal (Oscilante)</option>
-            <option value="reef" class="bg-slate-900 text-slate-200">Arrecife Coralino (Ciclo Rápido)</option>
-            <option value="plague" class="bg-slate-900 text-slate-200">Plaga de Roedores (Colapso Depredador)</option>
-            <option value="custom" class="bg-slate-900 text-slate-200">⚙️ Personalizado</option>
-          </select>
-        </div>
+      <!-- Active Biome Selector Badge -->
+      <div class="h-6 w-px bg-slate-800 hidden md:block"></div>
+      <button id="btn-change-biome" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-200 border border-slate-700/60 hover:border-slate-600 transition text-xs font-medium group" title="Cambiar bioma activo">
+        <span id="biome-icon-container" class="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
+          <i id="current-biome-icon" class="fa-solid fa-tree"></i>
+        </span>
+        <span id="active-biome-badge" class="font-display font-semibold tracking-wide text-slate-100">Bosque Templado</span>
+        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-200 transition-transform"></i>
+      </button>
+    </div>
 
-        <!-- Connection / Execution Status Badge -->
-        <div id="backend-status-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition bg-amber-500/10 text-amber-300 border-amber-500/30" title="Estado de ejecución del simulador">
-          <span class="relative flex h-2 w-2">
-            <span id="backend-status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span id="backend-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-          </span>
-          <span id="backend-status-text" class="font-medium">Modo Autónomo Local (RK4)</span>
-        </div>
+    <!-- Center: Time / Day Tracker -->
+    <div class="flex items-center gap-3 bg-slate-950/70 border border-slate-800/90 px-4 py-1.5 rounded-2xl shadow-inner">
+      <div class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" title="Tiempo en transcurso"></div>
+      <div class="text-xs text-slate-300 font-medium">
+        <span class="text-slate-400 uppercase tracking-wider text-[10px] mr-1">Ciclo:</span>
+        <span class="font-display font-bold text-sm text-white">Día <span id="current-day" class="text-amber-400 font-mono font-bold text-base">1</span></span>
+        <span class="text-slate-500 font-mono">/</span>
+        <span id="target-day" class="text-slate-400 font-mono font-medium">60</span>
+      </div>
+      <!-- Mini circular/pill progress indicator -->
+      <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden hidden sm:block">
+        <div id="day-progress-bar" class="bg-gradient-to-r from-amber-400 to-emerald-400 h-full w-[1.6%] transition-all duration-300"></div>
+      </div>
+    </div>
 
-        <!-- Math & Physics Modal Toggle Button -->
-        <button id="btn-open-math-modal" type="button" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium transition hover:border-slate-700 active:scale-95">
-          <i data-lucide="book-open" class="w-4 h-4 text-emerald-400"></i>
-          <span class="hidden sm:inline">Ecuaciones &amp; Modelo</span>
+    <!-- Right: Simulation Controls & Status -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Game Controls Group -->
+      <div class="flex items-center bg-slate-800/70 p-1 rounded-xl border border-slate-700/60">
+        <!-- Pause / Resume -->
+        <button id="btn-pause" class="px-2.5 py-1 rounded-lg hover:bg-slate-700 text-slate-200 hover:text-white transition flex items-center gap-1.5 text-xs font-medium" title="Pausar / Reanudar simulación (Espacio)">
+          <i id="pause-icon" class="fa-solid fa-pause text-emerald-400"></i>
+          <span id="pause-text" class="hidden sm:inline">Pausar</span>
         </button>
+
+        <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+        <!-- Speed 1x -->
+        <button id="btn-speed-1x" class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold border border-emerald-500/40 transition" title="Velocidad normal (1x)">
+          1x
+        </button>
+
+        <!-- Speed 2x -->
+        <button id="btn-speed-2x" class="px-2 py-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 font-mono text-xs font-bold transition ml-0.5" title="Velocidad rápida (2x)">
+          2x
+        </button>
+
+        <div class="h-4 w-px bg-slate-700 mx-1"></div>
+
+        <!-- Restart -->
+        <button id="btn-restart" class="p-1.5 rounded-lg hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 transition" title="Reiniciar simulación (R)">
+          <i class="fa-solid fa-rotate-right text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Action Buttons: Ranking & Guide -->
+      <button id="btn-open-ranking" class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-amber-400 border border-slate-700/60 hover:border-amber-500/40 transition flex items-center gap-1.5 text-xs font-medium" title="Tabla de Clasificación">
+        <i class="fa-solid fa-trophy"></i>
+        <span class="hidden md:inline text-slate-200">Ranking</span>
+      </button>
+
+      <button id="btn-open-guide" class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-sky-400 border border-slate-700/60 hover:border-sky-500/40 transition flex items-center gap-1.5 text-xs font-medium" title="Guía Científica Lotka-Volterra">
+        <i class="fa-solid fa-book-open"></i>
+        <span class="hidden md:inline text-slate-200">Guía</span>
+      </button>
+
+      <!-- Botón Cruzado a la Presentación Dinámica -->
+      <a href="/presentacion/" target="_blank" rel="noopener noreferrer" id="btn-open-presentation" class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-emerald-400 border border-slate-700/60 hover:border-emerald-500/40 transition flex items-center gap-1.5 text-xs font-medium group" title="Ver Presentación Dinámica (10 Diapositivas)">
+        <i class="fa-solid fa-chalkboard-user text-emerald-400 group-hover:scale-110 transition-transform"></i>
+        <span class="hidden md:inline text-slate-200">Ver Presentación</span>
+      </a>
+
+      <!-- Backend Connection Badge -->
+      <div id="backend-status-badge" class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-mono cursor-pointer transition hover:border-slate-700" title="Estado de conexión con el motor Lotka-Volterra">
+        <span class="relative flex h-2 w-2">
+          <span id="backend-status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span id="backend-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span id="backend-status-text" class="text-emerald-400 font-medium">Online</span>
       </div>
     </div>
   </header>
 
   <!-- ========================================================================= -->
-  <!-- LAYOUT PRINCIPAL (2 COLUMNAS ESCRITORIO / 1 COLUMNA MÓVIL)                -->
+  <!-- 2. CUERPO PRINCIPAL (GRID 70% CANVAS / 30% HUD MATEMÁTICO)                -->
   <!-- ========================================================================= -->
-  <main class="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
-
+  <main class="flex-1 w-full p-3 sm:p-4 gap-3 sm:gap-4 grid grid-cols-1 lg:grid-cols-10 min-h-0 overflow-hidden">
+    
     <!-- ======================================================================= -->
-    <!-- COLUMNA IZQUIERDA: PANEL DE PARÁMETROS Y CONTROLES (lg:col-span-4)      -->
+    <!-- LADO IZQUIERDO (70% lg:col-span-7) - EL TERRARIO VIVO                   -->
     <!-- ======================================================================= -->
-    <aside class="lg:col-span-4 flex flex-col space-y-5">
+    <section class="lg:col-span-7 h-full flex flex-col relative rounded-2xl border border-slate-800/80 bg-slate-900/40 backdrop-blur overflow-hidden shadow-2xl">
       
-      <form id="simulation-form" class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col space-y-6">
-        
-        <!-- Form Header with Engine Mode Switch -->
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div class="flex items-center space-x-2">
-            <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-200">Parámetros del Sistema</h2>
+      <!-- Banner superior de Eventos Climáticos (Animación Deslizante de Alerta) -->
+      <div id="weather-event-banner" class="absolute top-3 left-4 right-4 z-20 hidden animate-slide-down">
+        <div class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-950/90 via-slate-900/90 to-rose-950/90 border border-amber-500/60 shadow-lg shadow-amber-500/10 backdrop-blur-md flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="weather-event-icon" class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm border border-amber-500/30">
+              <i class="fa-solid fa-cloud-bolt animate-bounce"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="weather-event-title" class="font-display font-bold text-xs uppercase tracking-wider text-amber-400">¡Sequía Extrema detectada!</span>
+                <span class="px-1.5 py-0.2 rounded text-[10px] bg-amber-500/20 text-amber-300 font-mono font-semibold">EVENTO</span>
+              </div>
+              <p id="weather-event-desc" class="text-xs text-slate-300">La falta de agua reduce drásticamente el alimento de las presas ($\alpha \downarrow$).</p>
+            </div>
           </div>
+          <div class="flex items-center gap-2 font-mono text-xs">
+            <span class="text-slate-400">Tiempo restante:</span>
+            <span id="weather-event-timer" class="text-amber-300 font-bold px-2 py-0.5 rounded bg-slate-900/80 border border-amber-500/40">08s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas Principal del Terrario 2D -->
+      <div class="relative flex-1 w-full min-h-0 overflow-hidden bg-slate-950 rounded-t-2xl">
+        <canvas id="worldCanvas" class="w-full h-full block rounded-t-2xl cursor-crosshair"></canvas>
+
+        <!-- Overlaid Biome Environment Tag (Top-left inside canvas) -->
+        <div class="absolute top-3 left-4 pointer-events-none flex items-center gap-2 bg-slate-950/60 backdrop-blur-sm border border-slate-800/80 px-2.5 py-1 rounded-lg text-[11px] text-slate-400">
+          <i class="fa-solid fa-microchip text-emerald-400"></i>
+          <span>Simulador Físico Boids 2D</span>
+          <span class="text-slate-600">|</span>
+          <span id="fps-counter" class="font-mono text-emerald-400 font-semibold">60 FPS</span>
+        </div>
+
+        <!-- Overlaid Population Micro-HUD (Top-right inside canvas) -->
+        <div class="absolute top-3 right-4 pointer-events-none flex items-center gap-3 bg-slate-950/60 backdrop-blur-sm border border-slate-800/80 px-3 py-1 rounded-lg text-xs font-mono">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-slate-400">Presas:</span>
+            <span id="canvas-prey-badge" class="text-emerald-400 font-bold">40</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+            <span class="text-slate-400">Depredadores:</span>
+            <span id="canvas-predator-badge" class="text-rose-400 font-bold">9</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra Inferior de Intervención: Energía y 4 Cartas -->
+      <div class="shrink-0 bg-slate-900/95 border-t border-slate-800 p-3 sm:p-4 flex flex-col gap-2.5 z-20">
+        
+        <!-- Energy Bar Row -->
+        <div class="flex items-center justify-between text-xs font-medium">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-sky-400"></i>
+            <span class="font-display font-semibold tracking-wide text-slate-200">Energía Ecológica:</span>
+            <span id="energy-text" class="font-mono font-bold text-sky-300">100 / 100</span>
+            <span class="text-[10px] text-slate-400 font-mono">(+5/s)</span>
+          </div>
+          <div class="text-[11px] text-slate-400 hidden sm:block">
+            Haz clic o pulsa las teclas <kbd class="px-1 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">1</kbd> a <kbd class="px-1 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">4</kbd> para activar cartas
+          </div>
+        </div>
+
+        <!-- Energy Progress Bar -->
+        <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800 shadow-inner">
+          <div id="energy-bar" class="h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 transition-all duration-200 shadow-sm shadow-sky-500/50" style="width: 100%;"></div>
+        </div>
+
+        <!-- Contenedor de 4 Cartas de Intervención -->
+        <div id="cards-container" class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
           
-          <!-- Mode Switch Toggle (Auto / Forzar Local RK4) -->
-          <div class="flex items-center space-x-2">
-            <span class="text-[11px] text-slate-400 font-mono">Modo:</span>
-            <select id="execution-mode-select" class="text-[11px] font-mono bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-300 focus:outline-none focus:border-emerald-500">
-              <option value="auto">Auto (API / Fallback RK4)</option>
-              <option value="local">Forzar Local (RK4 en JS)</option>
-              <option value="backend">Forzar API Backend (Java)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- METADATOS DEL ECOSISTEMA -->
-        <div class="space-y-3">
-          <div class="flex items-center space-x-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
-            <i data-lucide="compass" class="w-3.5 h-3.5 text-slate-400"></i>
-            <span>Contexto Ecológico</span>
-          </div>
-          <div class="grid grid-cols-1 gap-2">
+          <!-- Carta 1: Lluvia Fértil -->
+          <button id="card-rain" class="intervention-card group relative p-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-sky-500/30 hover:border-sky-400 text-left flex flex-col justify-between transition-all" data-cost="25" title="Aumenta temporalmente el alimento vegetal acelerando el nacimiento de presas (+35% α por 8s)">
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-cloud-showers-heavy"></i>
+              </span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800/80 flex items-center gap-1">
+                <i class="fa-solid fa-bolt text-[9px]"></i> 25
+              </span>
+            </div>
             <div>
-              <label for="nombreEcosistema" class="block text-[11px] text-slate-400 mb-1">Nombre del Ecosistema</label>
-              <input type="text" id="nombreEcosistema" name="nombreEcosistema" value="Sabana Africana"
-                     class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label for="nombrePresa" class="block text-[11px] text-emerald-400 font-medium mb-1">Especie Presa (x)</label>
-                <input type="text" id="nombrePresa" name="nombrePresa" value="Gacelas"
-                       class="w-full bg-slate-950 border border-emerald-950/80 rounded-lg px-3 py-1.5 text-xs font-medium text-emerald-300 focus:outline-none focus:border-emerald-500 transition">
+              <div class="flex items-center justify-between">
+                <span class="font-display font-bold text-xs text-slate-100 group-hover:text-sky-300 transition-colors">Lluvia Fértil</span>
+                <span class="text-[10px] font-mono text-slate-500">[1]</span>
               </div>
-              <div>
-                <label for="nombreDepredador" class="block text-[11px] text-rose-400 font-medium mb-1">Depredador (y)</label>
-                <input type="text" id="nombreDepredador" name="nombreDepredador" value="Guepardos"
-                       class="w-full bg-slate-950 border border-rose-950/80 rounded-lg px-3 py-1.5 text-xs font-medium text-rose-300 focus:outline-none focus:border-rose-500 transition">
-              </div>
+              <p class="text-[10px] text-sky-400 font-medium">+35% &alpha; (8s)</p>
             </div>
-          </div>
-        </div>
-
-        <!-- =================================================================== -->
-        <!-- DINÁMICA DE PRESAS (x) - ESMERALDA                                  -->
-        <!-- =================================================================== -->
-        <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50"></span>
-              <h3 class="text-xs font-bold text-emerald-300 uppercase tracking-wide">Dinámica de Presas ($x$)</h3>
-            </div>
-            <span class="text-[10px] font-mono text-emerald-400/80 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Presas</span>
-          </div>
-
-          <!-- x0: Población Inicial -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="x0_input" class="text-slate-300 font-medium">Población Inicial ($x_0$)</label>
-              <input type="number" id="x0_input" name="x0" min="1" max="2000" step="1" value="100"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-emerald-300 focus:outline-none focus:border-emerald-400">
-            </div>
-            <input type="range" id="x0_slider" min="1" max="1000" step="1" value="100" class="w-full slider-prey">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>1 indiv.</span>
-              <span>1,000 indiv.</span>
-            </div>
-          </div>
-
-          <!-- Alpha: Tasa de Natalidad de Presas -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="alpha_input" class="text-slate-300 font-medium">Tasa Natalidad Presas ($\alpha$)</label>
-              <input type="number" id="alpha_input" name="alpha" min="0.001" max="2.0" step="0.005" value="0.100"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-emerald-300 focus:outline-none focus:border-emerald-400">
-            </div>
-            <input type="range" id="alpha_slider" min="0.01" max="1.0" step="0.005" value="0.100" class="w-full slider-prey">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0.01 /t</span>
-              <span>1.00 /t</span>
-            </div>
-          </div>
-
-          <!-- Beta: Tasa de Depredación / Encuentros -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="beta_input" class="text-slate-300 font-medium">Tasa Depredación ($\beta$)</label>
-              <input type="number" id="beta_input" name="beta" min="0.0001" max="0.05" step="0.0001" value="0.0020"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-emerald-300 focus:outline-none focus:border-emerald-400">
-            </div>
-            <input type="range" id="beta_slider" min="0.0001" max="0.01" step="0.0001" value="0.0020" class="w-full slider-prey">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0.0001</span>
-              <span>0.0100</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- =================================================================== -->
-        <!-- DINÁMICA DE DEPREDADORES (y) - ROSA / CORAL                         -->
-        <!-- =================================================================== -->
-        <div class="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-sm shadow-rose-400/50"></span>
-              <h3 class="text-xs font-bold text-rose-300 uppercase tracking-wide">Dinámica Depredadores ($y$)</h3>
-            </div>
-            <span class="text-[10px] font-mono text-rose-400/80 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">Depredadores</span>
-          </div>
-
-          <!-- y0: Población Inicial Depredadores -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="y0_input" class="text-slate-300 font-medium">Población Inicial ($y_0$)</label>
-              <input type="number" id="y0_input" name="y0" min="1" max="1000" step="1" value="20"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-rose-300 focus:outline-none focus:border-rose-400">
-            </div>
-            <input type="range" id="y0_slider" min="1" max="500" step="1" value="20" class="w-full slider-predator">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>1 indiv.</span>
-              <span>500 indiv.</span>
-            </div>
-          </div>
-
-          <!-- Delta: Eficiencia de Conversión -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="delta_input" class="text-slate-300 font-medium">Eficiencia Conversión ($\delta$)</label>
-              <input type="number" id="delta_input" name="delta" min="0.0001" max="0.05" step="0.0001" value="0.0010"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-rose-300 focus:outline-none focus:border-rose-400">
-            </div>
-            <input type="range" id="delta_slider" min="0.0001" max="0.01" step="0.0001" value="0.0010" class="w-full slider-predator">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0.0001</span>
-              <span>0.0100</span>
-            </div>
-          </div>
-
-          <!-- Gamma: Mortalidad Natural Depredadores -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="gamma_input" class="text-slate-300 font-medium">Mortalidad Depredadores ($\gamma$)</label>
-              <input type="number" id="gamma_input" name="gamma" min="0.001" max="1.0" step="0.005" value="0.050"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-rose-300 focus:outline-none focus:border-rose-400">
-            </div>
-            <input type="range" id="gamma_slider" min="0.005" max="0.5" step="0.005" value="0.050" class="w-full slider-predator">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0.005 /t</span>
-              <span>0.500 /t</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- =================================================================== -->
-        <!-- PARÁMETROS TEMPORALES DE LA SIMULACIÓN                              -->
-        <!-- =================================================================== -->
-        <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
-              <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wide">Resolución Temporal</h3>
-            </div>
-            <span class="text-[10px] font-mono text-indigo-400/80 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">RK4</span>
-          </div>
-
-          <!-- Tiempo Total T -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="tiempoTotal_input" class="text-slate-300 font-medium">Horizonte Temporal ($T$)</label>
-              <input type="number" id="tiempoTotal_input" name="tiempoTotal" min="10" max="1000" step="5" value="200"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-indigo-300 focus:outline-none focus:border-indigo-400">
-            </div>
-            <input type="range" id="tiempoTotal_slider" min="10" max="500" step="5" value="200" class="w-full slider-sim">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>10 pasos</span>
-              <span>500 pasos</span>
-            </div>
-          </div>
-
-          <!-- Paso de Tiempo dt -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <label for="pasoTiempo_input" class="text-slate-300 font-medium">Paso Numérico ($\Delta t$)</label>
-              <input type="number" id="pasoTiempo_input" name="pasoTiempo" min="0.005" max="0.5" step="0.005" value="0.100"
-                     class="w-20 bg-slate-950 border border-slate-700 rounded-md px-2 py-0.5 text-right font-mono text-xs text-indigo-300 focus:outline-none focus:border-indigo-400">
-            </div>
-            <input type="range" id="pasoTiempo_slider" min="0.01" max="0.5" step="0.01" value="0.100" class="w-full slider-sim">
-            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>0.01 (Alta precisión)</span>
-              <span>0.50</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- =================================================================== -->
-        <!-- BOTONERA DE ACCIÓN                                                  -->
-        <!-- =================================================================== -->
-        <div class="space-y-2 pt-2">
-          <!-- Botón Primario: Simular -->
-          <button type="submit" id="btn-simulate"
-                  class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition flex items-center justify-center space-x-2 cursor-pointer">
-            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-            <span>Ejecutar Simulación</span>
+            <!-- Active indicator ribbon -->
+            <div class="card-active-indicator hidden absolute inset-0 rounded-xl border-2 border-sky-400 bg-sky-500/10 pointer-events-none animate-pulse"></div>
           </button>
 
-          <!-- Botón Secundario: Restablecer -->
-          <button type="button" id="btn-reset"
-                  class="w-full py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-slate-700 font-medium text-xs transition flex items-center justify-center space-x-2 active:scale-[0.98]">
-            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-slate-400"></i>
-            <span>Restablecer Valores por Defecto</span>
+          <!-- Carta 2: Refugio Natural -->
+          <button id="card-shelter" class="intervention-card group relative p-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-emerald-500/30 hover:border-emerald-400 text-left flex flex-col justify-between transition-all" data-cost="30" title="Crea un santuario protegido reduciendo la tasa de depredación (-40% β por 8s)">
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-shield-halved"></i>
+              </span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/80 flex items-center gap-1">
+                <i class="fa-solid fa-bolt text-[9px]"></i> 30
+              </span>
+            </div>
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="font-display font-bold text-xs text-slate-100 group-hover:text-emerald-300 transition-colors">Refugio Natural</span>
+                <span class="text-[10px] font-mono text-slate-500">[2]</span>
+              </div>
+              <p class="text-[10px] text-emerald-400 font-medium">-40% &beta; (8s)</p>
+            </div>
+            <div class="card-active-indicator hidden absolute inset-0 rounded-xl border-2 border-emerald-400 bg-emerald-500/10 pointer-events-none animate-pulse"></div>
           </button>
-        </div>
 
-      </form>
-
-    </aside>
-
-    <!-- ======================================================================= -->
-    <!-- COLUMNA DERECHA: DASHBOARD DE VISUALIZACIÓN (lg:col-span-8)             -->
-    <!-- ======================================================================= -->
-    <section class="lg:col-span-8 flex flex-col space-y-6">
-
-      <!-- ===================================================================== -->
-      <!-- 1. MÈTRICAS EN TARJETAS (KPIS CIENTÍFICOS EN VIVO)                    -->
-      <!-- ===================================================================== -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        
-        <!-- KPI 1: Equilibrio Presas -->
-        <div class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-xl p-3.5 flex flex-col justify-between hover:border-emerald-500/30 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-1">
-            <span class="text-[11px] font-medium">Equilibrio Presas</span>
-            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">$\gamma / \delta$</span>
-          </div>
-          <div class="flex items-baseline space-x-1.5">
-            <span id="kpi-prey-equilibrium" class="text-xl sm:text-2xl font-bold font-mono text-emerald-400">50.0</span>
-            <span class="text-[11px] text-slate-500">indiv.</span>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-1 truncate" id="kpi-prey-status">Población estable crítica</p>
-        </div>
-
-        <!-- KPI 2: Equilibrio Depredadores -->
-        <div class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-xl p-3.5 flex flex-col justify-between hover:border-rose-500/30 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-1">
-            <span class="text-[11px] font-medium">Equilibrio Depred.</span>
-            <span class="text-[10px] font-mono text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">$\alpha / \beta$</span>
-          </div>
-          <div class="flex items-baseline space-x-1.5">
-            <span id="kpi-predator-equilibrium" class="text-xl sm:text-2xl font-bold font-mono text-rose-400">50.0</span>
-            <span class="text-[11px] text-slate-500">indiv.</span>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-1 truncate" id="kpi-predator-status">Población estable crítica</p>
-        </div>
-
-        <!-- KPI 3: Amplitudes Máximas / Picos -->
-        <div class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-xl p-3.5 flex flex-col justify-between hover:border-indigo-500/30 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-1">
-            <span class="text-[11px] font-medium">Picos Registrados</span>
-            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-indigo-400"></i>
-          </div>
-          <div class="space-y-0.5 font-mono text-xs">
-            <div class="flex justify-between items-center">
-              <span class="text-emerald-400 text-[11px]">Máx Presas:</span>
-              <span id="kpi-prey-max" class="font-bold text-slate-200">--</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-rose-400 text-[11px]">Máx Depred.:</span>
-              <span id="kpi-predator-max" class="font-bold text-slate-200">--</span>
-            </div>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-1 truncate">Amplitud de onda oscilatoria</p>
-        </div>
-
-        <!-- KPI 4: Período y Muestras -->
-        <div class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-xl p-3.5 flex flex-col justify-between hover:border-slate-700 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-1">
-            <span class="text-[11px] font-medium">Dinámica de Ciclo</span>
-            <i data-lucide="repeat" class="w-3.5 h-3.5 text-teal-400"></i>
-          </div>
-          <div class="flex items-baseline space-x-1.5">
-            <span id="kpi-period" class="text-xl sm:text-2xl font-bold font-mono text-teal-300">~88.8</span>
-            <span class="text-[11px] text-slate-500">$t$ (período)</span>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-1 truncate" id="kpi-calc-time">Cálculo: <span id="kpi-calc-time-val">0.0 ms</span></p>
-        </div>
-
-      </div>
-
-      <!-- ===================================================================== -->
-      <!-- 2. CONTENEDOR GRÁFICA 1: SERIE TEMPORAL (Poblaciones vs Tiempo)       -->
-      <!-- ===================================================================== -->
-      <div class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col space-y-4">
-        
-        <!-- Header de Gráfica 1 -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
-          <div class="flex items-center space-x-2.5">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <i data-lucide="line-chart" class="w-4 h-4 text-emerald-400"></i>
+          <!-- Carta 3: Migración de Presas -->
+          <button id="card-migration" class="intervention-card group relative p-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-amber-500/30 hover:border-amber-400 text-left flex flex-col justify-between transition-all" data-cost="40" title="Introduce una manada de presas salvadas de biomas vecinos (+15 presas instantáneas)">
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-paw"></i>
+              </span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800/80 flex items-center gap-1">
+                <i class="fa-solid fa-bolt text-[9px]"></i> 40
+              </span>
             </div>
             <div>
-              <h2 class="text-sm font-semibold text-slate-100 font-display">Serie Temporal: Dinámica de Poblaciones vs Tiempo</h2>
-              <p class="text-[11px] text-slate-400">Comportamiento armónico de depredador y presa en el tiempo $t$</p>
+              <div class="flex items-center justify-between">
+                <span class="font-display font-bold text-xs text-slate-100 group-hover:text-amber-300 transition-colors">Migración Presas</span>
+                <span class="text-[10px] font-mono text-slate-500">[3]</span>
+              </div>
+              <p class="text-[10px] text-amber-400 font-medium">+15 Presas inst.</p>
             </div>
-          </div>
+            <div class="card-active-indicator hidden absolute inset-0 rounded-xl border-2 border-amber-400 bg-amber-500/10 pointer-events-none animate-pulse"></div>
+          </button>
 
-          <!-- Controles de Visualización Serie Temporal -->
-          <div class="flex items-center space-x-2 text-xs">
-            <label class="flex items-center space-x-1.5 cursor-pointer bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-200 text-[11px]">
-              <input type="checkbox" id="toggle-grid-time" checked class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
-              <span>Cuadrícula</span>
-            </label>
-            <label class="flex items-center space-x-1.5 cursor-pointer bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-200 text-[11px]">
-              <input type="checkbox" id="toggle-equilibrium-time" checked class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
-              <span>Líneas de Equilibrio</span>
-            </label>
-            <button type="button" id="btn-export-time-chart" title="Descargar Imagen PNG" class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700">
-              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Canvas Gráfica 1 -->
-        <div class="chart-canvas-container">
-          <canvas id="timeSeriesChart"></canvas>
-        </div>
-
-        <!-- Leyenda Activa / Indicadores Rápidos -->
-        <div class="flex flex-wrap items-center justify-between text-xs pt-2 border-t border-slate-800/60 text-slate-400 font-mono">
-          <div class="flex items-center space-x-4">
-            <span class="flex items-center space-x-1.5">
-              <span class="w-3 h-0.5 bg-emerald-400 inline-block"></span>
-              <span class="text-slate-300 font-sans" id="label-legend-prey">Presas (x)</span>
-            </span>
-            <span class="flex items-center space-x-1.5">
-              <span class="w-3 h-0.5 bg-rose-400 inline-block"></span>
-              <span class="text-slate-300 font-sans" id="label-legend-predator">Depredadores (y)</span>
-            </span>
-            <span class="flex items-center space-x-1.5 text-slate-500 text-[11px]">
-              <span class="w-3 h-0.5 border-t border-dashed border-slate-600 inline-block"></span>
-              <span class="font-sans">Equilibrios críticos</span>
-            </span>
-          </div>
-          <div class="text-[11px] text-slate-500">
-            Algoritmo: <span class="text-slate-300 font-mono">Runge-Kutta 4º Orden (RK4)</span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ===================================================================== -->
-      <!-- 3. CONTENEDOR GRÁFICA 2: ESPACIO DE FASES (Retrato de Fase y Órbitas) -->
-      <!-- ===================================================================== -->
-      <div class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col space-y-4">
-        
-        <!-- Header de Gráfica 2 -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
-          <div class="flex items-center space-x-2.5">
-            <div class="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-              <i data-lucide="orbit" class="w-4 h-4 text-teal-400"></i>
+          <!-- Carta 4: Control de Depredadores -->
+          <button id="card-predator-control" class="intervention-card group relative p-2.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-rose-500/30 hover:border-rose-400 text-left flex flex-col justify-between transition-all" data-cost="35" title="Aplica feromonas disuasivas aumentando la mortalidad/dispersión de depredadores (+30% γ por 8s)">
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-bullseye"></i>
+              </span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800/80 flex items-center gap-1">
+                <i class="fa-solid fa-bolt text-[9px]"></i> 35
+              </span>
             </div>
             <div>
-              <h2 class="text-sm font-semibold text-slate-100 font-display">Espacio de Fases: Retrato de Trayectoria (y vs x)</h2>
-              <p class="text-[11px] text-slate-400">Órbita cerrada en el plano $x-y$ que ilustra la conservación del invariante de movimiento</p>
+              <div class="flex items-center justify-between">
+                <span class="font-display font-bold text-xs text-slate-100 group-hover:text-rose-300 transition-colors">Control Cazadores</span>
+                <span class="text-[10px] font-mono text-slate-500">[4]</span>
+              </div>
+              <p class="text-[10px] text-rose-400 font-medium">+30% &gamma; (8s)</p>
             </div>
-          </div>
+            <div class="card-active-indicator hidden absolute inset-0 rounded-xl border-2 border-rose-400 bg-rose-500/10 pointer-events-none animate-pulse"></div>
+          </button>
 
-          <!-- Controles Espacio de Fases -->
-          <div class="flex items-center space-x-2 text-xs">
-            <label class="flex items-center space-x-1.5 cursor-pointer bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-200 text-[11px]">
-              <input type="checkbox" id="toggle-grid-phase" checked class="rounded border-slate-700 bg-slate-900 text-teal-500 focus:ring-0">
-              <span>Cuadrícula</span>
-            </label>
-            <button type="button" id="btn-export-phase-chart" title="Descargar Imagen PNG" class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700">
-              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
         </div>
-
-        <!-- Canvas Gráfica 2 -->
-        <div class="chart-canvas-container">
-          <canvas id="phaseSpaceChart"></canvas>
-        </div>
-
-        <!-- Explicación del Retrato de Fase -->
-        <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl text-xs text-slate-400 flex items-start space-x-3">
-          <i data-lucide="info" class="w-4 h-4 text-teal-400 shrink-0 mt-0.5"></i>
-          <p class="leading-relaxed">
-            <strong class="text-slate-200">Interpretación del ciclo:</strong> Cada curva cerrada representa una órbita periódica conservativa alrededor del punto de equilibrio $(\gamma/\delta, \alpha/\beta)$. El sentido de giro es antihorario: el crecimiento de presas propicia la multiplicación de depredadores hasta alcanzar el colapso y reiniciar el ciclo.
-          </p>
-        </div>
-
       </div>
-
-      <!-- ===================================================================== -->
-      <!-- 4. SECCIÓN DE EXPORTACIÓN Y EXPLORACIÓN DE DATOS                      -->
-      <!-- ===================================================================== -->
-      <div class="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-xl flex flex-col space-y-4">
-        
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 class="text-sm font-semibold text-slate-100 font-display">Exportación &amp; Auditoría de Resultados</h3>
-            <p class="text-xs text-slate-400">Descarga los vectores generados o explora la tabla de valores discretos simulados.</p>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <!-- Descargar CSV -->
-            <button type="button" id="btn-download-csv" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-xs font-medium text-slate-200 transition active:scale-95">
-              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
-              <span>Descargar CSV</span>
-            </button>
-            
-            <!-- Descargar JSON -->
-            <button type="button" id="btn-download-json" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-xs font-medium text-slate-200 transition active:scale-95">
-              <i data-lucide="file-code-2" class="w-4 h-4 text-indigo-400"></i>
-              <span>Descargar JSON</span>
-            </button>
-
-            <!-- Toggle Tabla -->
-            <button type="button" id="btn-toggle-table" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-xs font-medium text-slate-200 transition active:scale-95">
-              <i data-lucide="table" class="w-4 h-4 text-teal-400"></i>
-              <span id="btn-toggle-table-text">Ver Tabla</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Tabla Colapsable de Datos Numéricos -->
-        <div id="data-table-container" class="hidden pt-3 border-t border-slate-800 overflow-x-auto max-h-72">
-          <table id="simulation-data-table" class="w-full text-left text-xs font-mono">
-            <thead class="sticky top-0 bg-slate-950 border-b border-slate-800 text-slate-400">
-              <tr>
-                <th class="py-2 px-3">Paso</th>
-                <th class="py-2 px-3">Tiempo ($t$)</th>
-                <th class="py-2 px-3 text-emerald-400">Presas ($x$)</th>
-                <th class="py-2 px-3 text-rose-400">Depredadores ($y$)</th>
-                <th class="py-2 px-3 text-slate-400">Invariante $V(x,y)$</th>
-              </tr>
-            </thead>
-            <tbody id="simulation-data-tbody" class="divide-y divide-slate-800/50 text-slate-300">
-              <tr>
-                <td colspan="5" class="py-4 text-center text-slate-500 font-sans">Ejecuta la simulación para visualizar el registro discretizado.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-
     </section>
 
+    <!-- ======================================================================= -->
+    <!-- LADO DERECHO (30% lg:col-span-3) - HUD MATEMÁTICO EN VIVO               -->
+    <!-- ======================================================================= -->
+    <aside class="lg:col-span-3 h-full bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col gap-3.5 overflow-y-auto max-h-full shadow-2xl">
+      
+      <!-- 1. CAJA DE ECUACIONES VIVAS -->
+      <div class="rounded-xl bg-slate-950/80 border border-slate-800/90 p-3 flex flex-col gap-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-square-root-variable text-cyan-400 text-xs"></i>
+            <h3 class="font-display font-bold text-xs uppercase tracking-wider text-slate-200">Ecuaciones Diferenciales</h3>
+          </div>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-800/50">Lotka-Volterra</span>
+        </div>
+
+        <!-- Formulas en KaTeX / Renderizadas -->
+        <div class="bg-slate-900/70 rounded-lg p-2 font-mono text-xs text-center border border-slate-800/60 flex flex-col gap-1">
+          <div class="text-emerald-400 font-medium">$$\frac{dx}{dt} = \alpha x - \beta x y$$</div>
+          <div class="text-rose-400 font-medium">$$\frac{dy}{dt} = \delta x y - \gamma y$$</div>
+        </div>
+
+        <!-- Cuadrícula de Parámetros Vivos -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <!-- Alpha -->
+          <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800/60 flex flex-col">
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Tasa natalidad presas (&alpha;)</span>
+            </div>
+            <span id="param-alpha" class="font-mono font-bold text-emerald-400 text-sm mt-0.5 transition-colors duration-300">0.100</span>
+          </div>
+
+          <!-- Beta -->
+          <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800/60 flex flex-col">
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Tasa depredación (&beta;)</span>
+            </div>
+            <span id="param-beta" class="font-mono font-bold text-amber-400 text-sm mt-0.5 transition-colors duration-300">0.020</span>
+          </div>
+
+          <!-- Delta -->
+          <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800/60 flex flex-col">
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Eficiencia conversión (&delta;)</span>
+            </div>
+            <span id="param-delta" class="font-mono font-bold text-cyan-400 text-sm mt-0.5 transition-colors duration-300">0.010</span>
+          </div>
+
+          <!-- Gamma -->
+          <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800/60 flex flex-col">
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Mortalidad depredador (&gamma;)</span>
+            </div>
+            <span id="param-gamma" class="font-mono font-bold text-rose-400 text-sm mt-0.5 transition-colors duration-300">0.300</span>
+          </div>
+        </div>
+
+        <!-- Tasas Instantáneas dx/dt & dy/dt con flechas de dirección -->
+        <div class="pt-1 border-t border-slate-800/60 flex items-center justify-between text-xs font-mono">
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400">dx/dt:</span>
+            <span id="rate-dxdt" class="font-bold text-emerald-400">+0.00</span>
+            <i id="arrow-dxdt" class="fa-solid fa-arrow-up text-emerald-400 text-[10px]"></i>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400">dy/dt:</span>
+            <span id="rate-dydt" class="font-bold text-rose-400">-0.00</span>
+            <i id="arrow-dydt" class="fa-solid fa-arrow-down text-rose-400 text-[10px]"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. CONTADORES DE POBLACIÓN (PRESAS & DEPREDADORES) -->
+      <div class="grid grid-cols-2 gap-2.5">
+        
+        <!-- Tarjeta Presas (x) -->
+        <div class="rounded-xl bg-emerald-950/20 border border-emerald-500/30 p-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-1.5 text-emerald-400 text-xs font-display font-semibold">
+              <i class="fa-solid fa-leaf"></i>
+              <span>Presas ($x$)</span>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          </div>
+          <!-- Contador principal -->
+          <div id="prey-count" class="font-mono font-extrabold text-3xl text-emerald-400 tracking-tight my-1">40</div>
+          <!-- Metadatos de población -->
+          <div class="text-[10px] text-slate-400 font-mono flex items-center justify-between pt-1 border-t border-emerald-500/20">
+            <span>Inicial: <b id="prey-initial" class="text-slate-200">40</b></span>
+            <span>Pico: <b id="prey-peak" class="text-emerald-300">40</b></span>
+          </div>
+        </div>
+
+        <!-- Tarjeta Depredadores (y) -->
+        <div class="rounded-xl bg-rose-950/20 border border-rose-500/30 p-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-1.5 text-rose-400 text-xs font-display font-semibold">
+              <i class="fa-solid fa-paw"></i>
+              <span>Depredadores ($y$)</span>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          </div>
+          <!-- Contador principal -->
+          <div id="predator-count" class="font-mono font-extrabold text-3xl text-rose-400 tracking-tight my-1">9</div>
+          <!-- Metadatos de población -->
+          <div class="text-[10px] text-slate-400 font-mono flex items-center justify-between pt-1 border-t border-rose-500/20">
+            <span>Inicial: <b id="predator-initial" class="text-slate-200">9</b></span>
+            <span>Pico: <b id="predator-peak" class="text-rose-300">9</b></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 3. MINI RADAR DE RETRATO DE FASE (x vs y) -->
+      <div class="rounded-xl bg-slate-950/80 border border-slate-800/90 p-3 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-amber-400 text-xs"></i>
+            <h3 class="font-display font-bold text-xs uppercase tracking-wider text-slate-200">Retrato de Fase</h3>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">Órbita $(x, y)$</span>
+        </div>
+
+        <!-- Canvas del Retrato de Fase -->
+        <div class="relative w-full h-40 bg-slate-900/60 rounded-lg border border-slate-800 flex items-center justify-center p-1 overflow-hidden">
+          <canvas id="phaseRadarChart" class="w-full h-full"></canvas>
+        </div>
+
+        <!-- Punto de Equilibrio Dorado E1 -->
+        <div id="equilibrium-info" class="flex items-center justify-between text-[11px] font-mono text-slate-400 bg-slate-900/40 px-2 py-1 rounded border border-slate-800/50">
+          <span class="flex items-center gap-1">
+            <i class="fa-solid fa-crosshairs text-amber-400 text-[10px]"></i>
+            <span>Equilibrio $E_1$:</span>
+          </span>
+          <span id="equilibrium-coords" class="text-amber-300 font-bold">(30.0, 5.0)</span>
+        </div>
+      </div>
+
+      <!-- 4. ÍNDICE DE ESTABILIDAD DEL BIOMA & PUNTUACIÓN -->
+      <div class="rounded-xl bg-slate-950/80 border border-slate-800/90 p-3 flex flex-col gap-2.5 mt-auto">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-heart-pulse text-emerald-400 text-xs"></i>
+            <h3 class="font-display font-bold text-xs uppercase tracking-wider text-slate-200">Salud del Bioma</h3>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase tracking-wider text-slate-400 mr-1">Puntos:</span>
+            <span id="current-score" class="font-mono text-base font-black text-amber-300">0 pts</span>
+          </div>
+        </div>
+
+        <!-- Stability Bar -->
+        <div>
+          <div class="flex items-center justify-between text-xs mb-1">
+            <span class="text-slate-400 text-[11px]">Estabilidad Ecológica</span>
+            <span id="stability-value" class="font-mono font-bold text-emerald-400 text-xs">100%</span>
+          </div>
+          <div class="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden border border-slate-800">
+            <div id="stability-meter" class="h-full rounded-full bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 transition-all duration-300 shadow-sm" style="width: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Status advice tag -->
+        <div class="text-[10px] text-slate-400 bg-slate-900/40 p-1.5 rounded flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-info text-sky-400 text-[10px]"></i>
+          <span id="ecosystem-status-advice">Ecosistema en equilibrio armónico regular.</span>
+        </div>
+      </div>
+
+    </aside>
   </main>
 
   <!-- ========================================================================= -->
-  <!-- MODAL DE DOCUMENTACIÓN Y FORMULACIÓN MATEMÁTICA                           -->
+  <!-- 3. MODALES DEL SISTEMA                                                    -->
   <!-- ========================================================================= -->
-  <div id="math-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-200">
-    <div class="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh] space-y-5">
+
+  <!-- MODAL 1: SELECCIÓN DE BIOMA (INICIO DE PARTIDA) -->
+  <div id="modal-biome-select" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-3xl w-full shadow-2xl flex flex-col gap-6 animate-slide-down">
       
       <!-- Modal Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <i data-lucide="sigma" class="w-4 h-4 text-emerald-400"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-100 font-display">Fundamentos del Modelo Lotka-Volterra</h3>
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-3">
+          <i class="fa-solid fa-shield-cat"></i> Misión del Guardián Ecológico
         </div>
-        <button type="button" id="btn-close-math-modal" class="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <!-- Modal Body -->
-      <div class="space-y-4 text-xs leading-relaxed text-slate-300">
-        <p>
-          El sistema diferencial de Lotka-Volterra modela la interacción ecológica entre dos poblaciones biológicas: presas ($x$) y depredadores ($y$):
+        <h2 class="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">Elige tu Bioma a Proteger</h2>
+        <p class="text-slate-400 text-xs sm:text-sm max-w-lg mx-auto mt-1">
+          Cada ecosistema posee constantes ecológicas y grados de volatilidad únicos gobernados por las ecuaciones diferenciales de Lotka-Volterra.
         </p>
-
-        <!-- Differential Equations Display -->
-        <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl font-mono text-center space-y-2 text-sm">
-          <div class="text-emerald-400 font-semibold">
-            $$\frac{dx}{dt} = \alpha x - \beta x y$$
-          </div>
-          <div class="text-rose-400 font-semibold">
-            $$\frac{dy}{dt} = \delta x y - \gamma y$$
-          </div>
-        </div>
-
-        <!-- Parameters Glossary -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <div class="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl space-y-1">
-            <h4 class="font-bold text-emerald-300">Parámetros de Presa:</h4>
-            <ul class="list-disc list-inside space-y-0.5 text-slate-300 text-[11px]">
-              <li>$\alpha$: Tasa intrínseca de natalidad exponencial sin depredadores.</li>
-              <li>$\beta$: Tasa de depredación o probabilidad de encuentro fatal.</li>
-            </ul>
-          </div>
-          <div class="p-3 bg-rose-500/5 border border-rose-500/20 rounded-xl space-y-1">
-            <h4 class="font-bold text-rose-300">Parámetros de Depredador:</h4>
-            <ul class="list-disc list-inside space-y-0.5 text-slate-300 text-[11px]">
-              <li>$\delta$: Eficiencia biológica para convertir biomasa de presa en crías.</li>
-              <li>$\gamma$: Tasa de mortalidad natural por senescencia o escasez.</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Equilbrium & Conservation Law -->
-        <div class="space-y-2 pt-2">
-          <h4 class="font-bold text-slate-200">Puntos de Equilibrio y Constante de Movimiento:</h4>
-          <p>
-            El sistema presenta un punto de equilibrio no trivial dado por:
-            <span class="font-mono text-teal-300 font-medium">$(x^*, y^*) = (\gamma / \delta, \alpha / \beta)$</span>.
-          </p>
-          <p>
-            Además, existe una cantidad invariante conservada $V(x, y)$ a lo largo de cualquier solución:
-          </p>
-          <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl font-mono text-center text-xs text-indigo-300">
-            $$V(x, y) = \delta x - \gamma \ln(x) + \beta y - \alpha \ln(y) = \text{Constante}$$
-          </div>
-        </div>
-
-        <!-- Numerical Method (RK4) -->
-        <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1.5">
-          <h4 class="font-bold text-slate-200 flex items-center space-x-1.5">
-            <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>Método Numérico Runge-Kutta 4º Orden (RK4)</span>
-          </h4>
-          <p class="text-[11px] text-slate-400">
-            Tanto el backend en Java como el motor autónomo en JavaScript implementan el algoritmo clásico de 4 evaluaciones ponderadas por paso temporal:
-            $$y_{n+1} = y_n + \frac{\Delta t}{6} (k_1 + 2k_2 + 2k_3 + k_4)$$
-            Garantizando un error de truncamiento local de orden $\mathcal{O}(\Delta t^5)$ y global $\mathcal{O}(\Delta t^4)$.
-          </p>
-        </div>
       </div>
 
-      <!-- Modal Footer -->
-      <div class="flex justify-end pt-3 border-t border-slate-800">
-        <button type="button" id="btn-modal-understood" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
-          Entendido
+      <!-- 3 Biome Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="biome-options-container">
+        
+        <!-- Tarjeta 1: Bosque Templado -->
+        <div class="biome-card group relative p-4 rounded-2xl bg-slate-950/90 hover:bg-slate-950 border-2 border-emerald-500 cursor-pointer transition-all flex flex-col justify-between" data-biome="BOSQUE">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-tree"></i>
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Equilibrado</span>
+            </div>
+            <h4 class="font-display font-bold text-base text-white">Bosque Templado</h4>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              Ciclos suaves con presas abundantes y predación constante. Ideal para aprender a sintonizar el punto dorado.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 font-mono text-[11px] text-slate-400 flex flex-col gap-1">
+            <div class="flex justify-between"><span>Presas ($x_0$):</span> <b class="text-emerald-400">40</b></div>
+            <div class="flex justify-between"><span>Depredadores ($y_0$):</span> <b class="text-rose-400">9</b></div>
+            <div class="flex justify-between"><span>$\alpha, \beta, \delta, \gamma$:</span> <span class="text-slate-300">0.1, 0.02, 0.01, 0.3</span></div>
+          </div>
+          <!-- Selected check icon -->
+          <div class="biome-selected-badge absolute -top-2 -right-2 w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
+            <i class="fa-solid fa-check"></i>
+          </div>
+        </div>
+
+        <!-- Tarjeta 2: Sabana Africana -->
+        <div class="biome-card group relative p-4 rounded-2xl bg-slate-950/90 hover:bg-slate-950 border-2 border-slate-800 hover:border-amber-500/60 cursor-pointer transition-all flex flex-col justify-between" data-biome="SABANA">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-sun"></i>
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">Volátil</span>
+            </div>
+            <h4 class="font-display font-bold text-base text-white">Sabana Africana</h4>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              Planicies abiertas de alta tasa de natalidad y caza feroz. Oscilaciones amplias con riesgo de extinciones repentinas.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 font-mono text-[11px] text-slate-400 flex flex-col gap-1">
+            <div class="flex justify-between"><span>Presas ($x_0$):</span> <b class="text-emerald-400">60</b></div>
+            <div class="flex justify-between"><span>Depredadores ($y_0$):</span> <b class="text-rose-400">15</b></div>
+            <div class="flex justify-between"><span>$\alpha, \beta, \delta, \gamma$:</span> <span class="text-slate-300">0.25, 0.05, 0.02, 0.5</span></div>
+          </div>
+          <div class="biome-selected-badge hidden absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
+            <i class="fa-solid fa-check"></i>
+          </div>
+        </div>
+
+        <!-- Tarjeta 3: Tundra Ártica -->
+        <div class="biome-card group relative p-4 rounded-2xl bg-slate-950/90 hover:bg-slate-950 border-2 border-slate-800 hover:border-cyan-500/60 cursor-pointer transition-all flex flex-col justify-between" data-biome="TUNDRA">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-snowflake"></i>
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">Escasez</span>
+            </div>
+            <h4 class="font-display font-bold text-base text-white">Tundra Glacial</h4>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              Recursos mínimos y frío implacable. Crecimiento lento donde un solo error en las cartas causará un colapso en cadena.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 font-mono text-[11px] text-slate-400 flex flex-col gap-1">
+            <div class="flex justify-between"><span>Presas ($x_0$):</span> <b class="text-emerald-400">30</b></div>
+            <div class="flex justify-between"><span>Depredadores ($y_0$):</span> <b class="text-rose-400">6</b></div>
+            <div class="flex justify-between"><span>$\alpha, \beta, \delta, \gamma$:</span> <span class="text-slate-300">0.06, 0.015, 0.008, 0.2</span></div>
+          </div>
+          <div class="biome-selected-badge hidden absolute -top-2 -right-2 w-6 h-6 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-xs font-bold shadow-md">
+            <i class="fa-solid fa-check"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Button -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button id="btn-start-mission" class="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-display font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition flex items-center justify-center gap-2">
+          <span>Comenzar Misión de Guardián</span>
+          <i class="fa-solid fa-arrow-right"></i>
         </button>
       </div>
 
     </div>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- FOOTER                                                                    -->
-  <!-- ========================================================================= -->
-  <footer class="w-full border-t border-slate-900 bg-slate-950 py-4 px-4 text-center text-xs text-slate-600 font-mono">
-    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-      <p>EcoFlux &bull; Simulador Dinámico de Ecosistemas &bull; UDEC 2026</p>
-      <p class="text-slate-500">Desarrollado con Tailwind CSS + Chart.js + RK4</p>
+  <!-- MODAL 2: FIN DE PARTIDA (VICTORIA / EXTINCIÓN) -->
+  <div id="modal-game-over" class="modal-backdrop hidden-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl flex flex-col gap-5 animate-slide-down">
+      
+      <!-- Title & Result Badge -->
+      <div class="text-center">
+        <div id="game-over-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold mb-2">
+          <i class="fa-solid fa-trophy"></i> <span>¡Misión Cumplida!</span>
+        </div>
+        <h2 id="game-over-title" class="font-display font-black text-2xl sm:text-3xl text-white">Equilibrio Preservado</h2>
+        <p id="game-over-subtitle" class="text-slate-400 text-xs sm:text-sm mt-1">Has guiado el ecosistema a través de las 60 jornadas con éxito.</p>
+      </div>
+
+      <!-- Metric Highlights Cards -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 text-center">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400">Puntaje Final</span>
+          <div id="final-score" class="font-mono text-xl sm:text-2xl font-black text-amber-300 mt-0.5">2,850</div>
+        </div>
+        <div class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 text-center">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400">Días Sobrevividos</span>
+          <div id="days-survived" class="font-mono text-xl sm:text-2xl font-black text-emerald-400 mt-0.5">60 / 60</div>
+        </div>
+        <div class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 text-center">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400">Estabilidad Media</span>
+          <div id="avg-stability" class="font-mono text-xl sm:text-2xl font-black text-cyan-400 mt-0.5">94.2%</div>
+        </div>
+      </div>
+
+      <!-- Gráfico de Comparación: Jugador vs Proyección Sin Intervención -->
+      <div class="bg-slate-950/90 rounded-2xl p-3 border border-slate-800/90 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-display font-bold text-slate-300">Curva de Población vs Proyección Lotka-Volterra</span>
+          <span class="text-[10px] text-slate-400 font-mono">x(t) & y(t)</span>
+        </div>
+        <div class="relative w-full h-44">
+          <canvas id="comparisonChart" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- Save Score Input -->
+      <div class="flex flex-col sm:flex-row gap-2 pt-1">
+        <input id="player-name-input" type="text" placeholder="Tu nombre de Guardián..." maxlength="20" class="flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none font-medium">
+        <button id="btn-save-score" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-display font-bold text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-1.5 shrink-0">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar en Ranking
+        </button>
+        <button id="btn-play-again" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-display font-bold text-xs border border-slate-700 transition flex items-center justify-center gap-1.5 shrink-0">
+          <i class="fa-solid fa-rotate-right"></i> Jugar de Nuevo
+        </button>
+      </div>
+
     </div>
-  </footer>
+  </div>
 
-  <!-- Lucide icons initialization helper -->
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      if (window.lucide) {
-        lucide.createIcons();
-      }
-    });
-  </script>
+  <!-- MODAL 3: RANKING GLOBAL (HALL OF FAME) -->
+  <div id="modal-ranking" class="modal-backdrop hidden-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 max-w-2xl w-full shadow-2xl flex flex-col gap-4 animate-slide-down max-h-[85vh]">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-trophy"></i>
+          </span>
+          <div>
+            <h3 class="font-display font-bold text-lg text-white">Salón de Honor de Guardianes</h3>
+            <p class="text-xs text-slate-400">Mejores puntajes registrados en EcoFlux.</p>
+          </div>
+        </div>
+        <button id="btn-close-ranking" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
 
-  <!-- Script modular de la aplicación -->
-  <script type="module" src="js/app.js"></script>
+      <!-- Table Container -->
+      <div class="overflow-y-auto flex-1 max-h-80 rounded-xl border border-slate-800 bg-slate-950/60">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900/90 text-[10px] uppercase tracking-wider text-slate-400 font-mono sticky top-0 border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-3">#</th>
+              <th class="py-2.5 px-3">Guardián</th>
+              <th class="py-2.5 px-3">Bioma</th>
+              <th class="py-2.5 px-3">Días</th>
+              <th class="py-2.5 px-3">Estabilidad</th>
+              <th class="py-2.5 px-3 text-right">Puntaje</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-tbody" class="divide-y divide-slate-800/60 font-mono text-slate-300">
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-2.5 px-3 font-bold text-amber-400">🥇 1</td>
+              <td class="py-2.5 px-3 font-semibold text-white">Juan Pablo</td>
+              <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300">Bosque</span></td>
+              <td class="py-2.5 px-3">60/60</td>
+              <td class="py-2.5 px-3 text-emerald-400 font-bold">96.8%</td>
+              <td class="py-2.5 px-3 text-right font-black text-amber-300">3,420</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-2.5 px-3 font-bold text-slate-300">🥈 2</td>
+              <td class="py-2.5 px-3 font-semibold text-white">BioMaster</td>
+              <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300">Sabana</span></td>
+              <td class="py-2.5 px-3">60/60</td>
+              <td class="py-2.5 px-3 text-emerald-400 font-bold">92.4%</td>
+              <td class="py-2.5 px-3 text-right font-black text-amber-300">3,110</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-2.5 px-3 font-bold text-amber-600">🥉 3</td>
+              <td class="py-2.5 px-3 font-semibold text-white">EcoRanger</td>
+              <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] bg-cyan-500/20 text-cyan-300">Tundra</span></td>
+              <td class="py-2.5 px-3">60/60</td>
+              <td class="py-2.5 px-3 text-emerald-400 font-bold">89.0%</td>
+              <td class="py-2.5 px-3 text-right font-black text-amber-300">2,890</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="text-right text-[11px] text-slate-500 font-mono">
+        EcoFlux Backend Sync v2.0
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 4: GUÍA CIENTÍFICA (LOTKA-VOLTERRA & CARTAS) -->
+  <div id="modal-guide" class="modal-backdrop hidden-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 max-w-2xl w-full shadow-2xl flex flex-col gap-4 animate-slide-down max-h-[85vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-book-open"></i>
+          </span>
+          <div>
+            <h3 class="font-display font-bold text-lg text-white">Manual Científico del Guardián</h3>
+            <p class="text-xs text-slate-400">Modelo Presa-Depredador de Lotka-Volterra y Estrategias.</p>
+          </div>
+        </div>
+        <button id="btn-close-guide" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Content Sections -->
+      <div class="flex flex-col gap-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
+        
+        <!-- Section 1 -->
+        <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+          <h4 class="font-display font-bold text-emerald-400 text-sm mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-superscript"></i> 1. El Sistema Diferencial
+          </h4>
+          <p class="text-slate-300 mb-2">
+            Formulado en 1925-1926 por Alfred J. Lotka y Vito Volterra, modela la interacción entre una población de presas $x$ y depredadores $y$:
+          </p>
+          <div class="bg-slate-900 p-2.5 rounded font-mono text-center text-xs border border-slate-800 my-2">
+            <div class="text-emerald-400 font-bold">$$\frac{dx}{dt} = \alpha x - \beta x y$$</div>
+            <div class="text-rose-400 font-bold mt-1">$$\frac{dy}{dt} = \delta x y - \gamma y$$</div>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-400 text-xs mt-2">
+            <li><b class="text-emerald-400">&alpha; (Alfa):</b> Tasa de crecimiento natural de las presas en ausencia de depredadores.</li>
+            <li><b class="text-amber-400">&beta; (Beta):</b> Tasa de ataque / mortalidad de presas por encuentro con depredadores.</li>
+            <li><b class="text-cyan-400">&delta; (Delta):</b> Eficiencia con la que el depredador convierte presas devoradas en crías.</li>
+            <li><b class="text-rose-400">&gamma; (Gamma):</b> Tasa de mortalidad natural de los depredadores si no encuentran presas.</li>
+          </ul>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+          <h4 class="font-display font-bold text-amber-400 text-sm mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-crosshairs"></i> 2. Punto Dorado de Equilibrio ($E_1$)
+          </h4>
+          <p class="text-slate-300">
+            Haciendo $\frac{dx}{dt} = 0$ y $\frac{dy}{dt} = 0$ para poblaciones no nulas se obtiene el centro neutro del sistema:
+          </p>
+          <div class="bg-slate-900 p-2 rounded font-mono text-center text-amber-300 font-bold text-xs my-1 border border-slate-800">
+            $$E_1 = \left( \frac{\gamma}{\delta}, \frac{\alpha}{\beta} \right)$$
+          </div>
+          <p class="text-slate-400 text-xs">
+            En el <b>Retrato de Fase</b>, las trayectorias forman órbitas cerradas periódicas alrededor de $E_1$. Mantenerse cerca de $E_1$ otorga la máxima estabilidad ecológica (100%) y bonificación continua de puntos.
+          </p>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+          <h4 class="font-display font-bold text-sky-400 text-sm mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 3. Tus Cartas de Intervención
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2 rounded bg-slate-900 border border-sky-500/30">
+              <b class="text-sky-400"><i class="fa-solid fa-cloud-showers-heavy"></i> Lluvia Fértil (25 Energía):</b>
+              <p class="text-slate-400 mt-0.5">Sube temporalmente $\alpha$ en un +35%. Úsalo cuando las presas estén cerca del colapso.</p>
+            </div>
+            <div class="p-2 rounded bg-slate-900 border border-emerald-500/30">
+              <b class="text-emerald-400"><i class="fa-solid fa-shield-halved"></i> Refugio Natural (30 Energía):</b>
+              <p class="text-slate-400 mt-0.5">Reduce $\beta$ en -40%. Frena la sobre-caza si hay demasiados depredadores.</p>
+            </div>
+            <div class="p-2 rounded bg-slate-900 border border-amber-500/30">
+              <b class="text-amber-400"><i class="fa-solid fa-paw"></i> Migración Presas (40 Energía):</b>
+              <p class="text-slate-400 mt-0.5">Inyección inmediata de +15 presas vivas para evitar una extinción fatal.</p>
+            </div>
+            <div class="p-2 rounded bg-slate-900 border border-rose-500/30">
+              <b class="text-rose-400"><i class="fa-solid fa-bullseye"></i> Control Depredador (35 Energía):</b>
+              <p class="text-slate-400 mt-0.5">Eleva $\gamma$ en +30% durante 8s. Reduce manadas excesivas de carnívoros.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Close Button -->
+      <div class="flex justify-end pt-2">
+        <button id="btn-close-guide-footer" class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-display font-bold text-xs transition">
+          Entendido, volver a la Misión
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-20 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ========================================================================= -->
+  <!-- 4. CARGA MODULAR DE JUEGO                                                 -->
+  <!-- ========================================================================= -->
+  <script type="module" src="./js/gameLoop.js"></script>
 
 </body>
 </html>
