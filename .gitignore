@@ -18,3 +18,8 @@ target/
 *.log
 .DS_Store
 Thumbs.db
+
+# Entregables de documentacion y presentacion (en ramas dedicadas)
+docs/
+presentacion/
+

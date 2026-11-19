@@ -6,6 +6,13 @@
  * Conexión resiliente con la API Spring Boot (puerto 8080).
  * Maneja timeouts con AbortController, validación y normalización
  * de la respuesta del backend para el visualizador.
+ * Endpoints CRUD y Presets soportados:
+ * - POST   /api/v1/simulaciones/calcular  (Cálculo en memoria)
+ * - POST   /api/v1/simulaciones           (Persistir simulación)
+ * - GET    /api/v1/simulaciones           (Listar resumen de simulaciones)
+ * - GET    /api/v1/simulaciones/{id}      (Cargar simulación por ID)
+ * - DELETE /api/v1/simulaciones/{id}      (Eliminar simulación)
+ * - GET    /api/v1/presets                (Obtener presets del backend)
  * ============================================================================
  */
 
@@ -39,65 +46,24 @@ export function estructurarPayloadDTO(params) {
 }
 
 /**
- * Realiza una petición POST al endpoint de cálculo de simulaciones en el backend Java.
- * Si el servidor tarda más de 3.5s o no responde (red caída, backend apagado),
- * cancela la petición y arroja un error descriptivo para permitir el fallback al motor JS.
- * 
- * @param {Object} params Configuración del ecosistema
- * @param {number} [timeoutMs=3500] Tiempo límite de espera en ms
- * @returns {Promise<{ serieTemporal: Array<Object>, estadisticas: Object, origen: string, tiempoRespuestaMs: number }>}
+ * Helper para extraer mensajes descriptivos de error desde respuestas HTTP.
  */
-export async function calcularSimulacionAPI(params, timeoutMs = DEFAULT_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  const payload = estructurarPayloadDTO(params);
-  const url = `${API_BASE_URL}/simulaciones/calcular`;
-  const tInicio = performance.now();
-
+async function extraerMensajeError(response) {
+  let detalle = `Error HTTP ${response.status} (${response.statusText})`;
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-
-    clearTimeout(timer);
-    const tiempoRespuestaMs = Number((performance.now() - tInicio).toFixed(1));
-
-    if (!response.ok) {
-      let detalleError = `Error HTTP ${response.status} (${response.statusText})`;
-      try {
-        const errorBody = await response.json();
-        if (errorBody && (errorBody.mensaje || errorBody.message || errorBody.detail)) {
-          detalleError += `: ${errorBody.mensaje || errorBody.message || errorBody.detail}`;
-        }
-      } catch {
-        // Fallback si la respuesta de error no es JSON
+    const errorBody = await response.json();
+    if (errorBody) {
+      if (errorBody.mensaje) return `${detalle}: ${errorBody.mensaje}`;
+      if (errorBody.message) return `${detalle}: ${errorBody.message}`;
+      if (errorBody.detail) return `${detalle}: ${errorBody.detail}`;
+      if (errorBody.errores && Array.isArray(errorBody.errores)) {
+        return `${detalle}: ${errorBody.errores.join(', ')}`;
       }
-      throw new Error(detalleError);
     }
-
-    const json = await response.json();
-    return procesarRespuestaBackend(json, payload, tiempoRespuestaMs);
-
-  } catch (err) {
-    clearTimeout(timer);
-
-    if (err.name === 'AbortError') {
-      throw new Error(`Timeout de conexión: el backend en ${url} no respondió en ${timeoutMs}ms.`);
-    }
-
-    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
-      throw new Error(`Servidor inalcanzable: no se pudo establecer conexión con ${API_BASE_URL}. Asegúrate de que el backend Spring Boot esté ejecutándose.`);
-    }
-
-    throw err;
+  } catch {
+    // Respuesta no es JSON
   }
+  return detalle;
 }
 
 /**
@@ -109,7 +75,7 @@ export async function calcularSimulacionAPI(params, timeoutMs = DEFAULT_TIMEOUT_
  * @param {any} data Respuesta cruda del backend
  * @param {Object} params Parámetros enviados
  * @param {number} tiempoRespuestaMs Tiempo que tardó la llamada
- * @returns {{ serieTemporal: Array<Object>, estadisticas: Object, origen: string, tiempoRespuestaMs: number }}
+ * @returns {{ id: number|null, nombreEcosistema: string, nombrePresa: string, nombreDepredador: string, fechaCreacion: string|null, parametros: Object, serieTemporal: Array<Object>, estadisticas: Object, origen: string, tiempoRespuestaMs: number }}
  */
 function procesarRespuestaBackend(data, params, tiempoRespuestaMs) {
   let serieCruda = [];
@@ -136,21 +102,35 @@ function procesarRespuestaBackend(data, params, tiempoRespuestaMs) {
     throw new Error('La respuesta del backend no contiene una serie temporal de puntos válida.');
   }
 
-  // Normalizar puntos de la serie asegurando paso y cantidad conservada
-  const serieNormalizada = serieCruda.map((p, index) => {
+  // Normalizar puntos de la serie asegurando paso y cantidad conservada con precisión nativa
+  let serieNormalizada = serieCruda.map((p, index) => {
     const t = Number(p.tiempo ?? p.t ?? 0);
     const x = Number(p.presas ?? p.x ?? 0);
     const y = Number(p.depredadores ?? p.y ?? 0);
-    const conservada = Number(p.conservada ?? cantidadConservada(params, x, y).toFixed(5));
+    const conservada = Number(p.conservada ?? cantidadConservada(params, x, y));
 
     return {
-      paso: index,
-      tiempo: Number(t.toFixed(4)),
-      presas: Number(x.toFixed(4)),
-      depredadores: Number(y.toFixed(4)),
+      paso: p.paso ?? index,
+      tiempo: t,
+      presas: x,
+      depredadores: y,
       conservada
     };
   });
+
+  // Si excede 10,000 puntos, submuestrear para proteger el rendimiento del navegador y Chart.js
+  if (serieNormalizada.length > 10000) {
+    const factor = Math.ceil(serieNormalizada.length / 10000);
+    const subserie = [];
+    for (let i = 0; i < serieNormalizada.length; i += factor) {
+      subserie.push(serieNormalizada[i]);
+    }
+    const ultimoPunto = serieNormalizada[serieNormalizada.length - 1];
+    if (subserie[subserie.length - 1] !== ultimoPunto) {
+      subserie.push(ultimoPunto);
+    }
+    serieNormalizada = subserie;
+  }
 
   // Si el backend no proveyó estadísticas, calcularlas en el cliente
   if (!estadisticas) {
@@ -158,11 +138,301 @@ function procesarRespuestaBackend(data, params, tiempoRespuestaMs) {
   }
 
   return {
+    id: data && data.id != null ? data.id : null,
+    nombreEcosistema: data?.nombreEcosistema || params.nombreEcosistema || 'Ecosistema',
+    nombrePresa: data?.nombrePresa || params.nombrePresa || 'Presas',
+    nombreDepredador: data?.nombreDepredador || params.nombreDepredador || 'Depredadores',
+    fechaCreacion: data?.fechaCreacion || null,
+    parametros: data?.parametros || params,
     serieTemporal: serieNormalizada,
     estadisticas,
     origen: 'backend',
     tiempoRespuestaMs
   };
+}
+
+/**
+ * Realiza una petición POST al endpoint de cálculo de simulaciones en el backend Java.
+ * Si el servidor tarda más de 3.5s o no responde (red caída, backend apagado),
+ * cancela la petición y arroja un error descriptivo para permitir el fallback al motor JS.
+ * 
+ * @param {Object} params Configuración del ecosistema
+ * @param {number} [timeoutMs=3500] Tiempo límite de espera en ms
+ * @returns {Promise<Object>} Resultado con serie temporal y estadísticas
+ */
+export async function calcularSimulacionAPI(params, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const payload = estructurarPayloadDTO(params);
+  const url = `${API_BASE_URL}/simulaciones/calcular`;
+  const tInicio = performance.now();
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+    const tiempoRespuestaMs = Number((performance.now() - tInicio).toFixed(1));
+
+    if (!response.ok) {
+      const detalle = await extraerMensajeError(response);
+      throw new Error(detalle);
+    }
+
+    const json = await response.json();
+    return procesarRespuestaBackend(json, payload, tiempoRespuestaMs);
+
+  } catch (err) {
+    clearTimeout(timer);
+
+    if (err.name === 'AbortError') {
+      throw new Error(`Timeout de conexión: el backend en ${url} no respondió en ${timeoutMs}ms.`);
+    }
+
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      throw new Error(`Servidor inalcanzable: no se pudo establecer conexión con ${API_BASE_URL}. Asegúrate de que el backend Spring Boot esté ejecutándose.`);
+    }
+
+    throw err;
+  }
+}
+
+/**
+ * Guarda y persiste una nueva simulación en la base de datos a través de POST /api/v1/simulaciones.
+ * 
+ * @param {Object} params Parámetros de la simulación
+ * @param {number} [timeoutMs=4500] Tiempo de espera máximo
+ * @returns {Promise<Object>} Simulación persistida con su ID generado y serie calculada
+ */
+export async function guardarSimulacionAPI(params, timeoutMs = 4500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const payload = estructurarPayloadDTO(params);
+  const url = `${API_BASE_URL}/simulaciones`;
+  const tInicio = performance.now();
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+    const tiempoRespuestaMs = Number((performance.now() - tInicio).toFixed(1));
+
+    if (!response.ok) {
+      const detalle = await extraerMensajeError(response);
+      throw new Error(detalle);
+    }
+
+    const json = await response.json();
+    return procesarRespuestaBackend(json, payload, tiempoRespuestaMs);
+
+  } catch (err) {
+    clearTimeout(timer);
+
+    if (err.name === 'AbortError') {
+      throw new Error(`Timeout al guardar: el backend en ${url} no respondió en ${timeoutMs}ms.`);
+    }
+
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      throw new Error(`Servidor inalcanzable: no se pudo conectar con ${API_BASE_URL} para guardar la simulación.`);
+    }
+
+    throw err;
+  }
+}
+
+/**
+ * Obtiene el catálogo de simulaciones guardadas (resumen ligero) mediante GET /api/v1/simulaciones.
+ * 
+ * @param {number} [timeoutMs=3500]
+ * @returns {Promise<Array<Object>>} Lista de simulaciones resumidas
+ */
+export async function listarSimulacionesAPI(timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const url = `${API_BASE_URL}/simulaciones`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+
+    if (!response.ok) {
+      const detalle = await extraerMensajeError(response);
+      throw new Error(detalle);
+    }
+
+    const lista = await response.json();
+    return Array.isArray(lista) ? lista : [];
+
+  } catch (err) {
+    clearTimeout(timer);
+
+    if (err.name === 'AbortError') {
+      throw new Error(`Timeout al listar simulaciones desde ${url}.`);
+    }
+
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      throw new Error(`Servidor inalcanzable: no se pudo listar simulaciones desde ${API_BASE_URL}.`);
+    }
+
+    throw err;
+  }
+}
+
+/**
+ * Recupera un ecosistema guardado por su ID con recálculo dinámico de serie temporal mediante GET /api/v1/simulaciones/{id}.
+ * 
+ * @param {number|string} id Identificador único de la simulación
+ * @param {number} [timeoutMs=3500]
+ * @returns {Promise<Object>} Simulación completa con serie temporal y estadísticas
+ */
+export async function cargarSimulacionAPI(id, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  if (!id) throw new Error('Se requiere un ID de simulación válido.');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const url = `${API_BASE_URL}/simulaciones/${id}`;
+  const tInicio = performance.now();
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+    const tiempoRespuestaMs = Number((performance.now() - tInicio).toFixed(1));
+
+    if (!response.ok) {
+      const detalle = await extraerMensajeError(response);
+      throw new Error(detalle);
+    }
+
+    const json = await response.json();
+    return procesarRespuestaBackend(json, json.parametros || {}, tiempoRespuestaMs);
+
+  } catch (err) {
+    clearTimeout(timer);
+
+    if (err.name === 'AbortError') {
+      throw new Error(`Timeout al cargar la simulación #${id}.`);
+    }
+
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      throw new Error(`Servidor inalcanzable al cargar la simulación #${id}.`);
+    }
+
+    throw err;
+  }
+}
+
+/**
+ * Elimina una simulación guardada permanentemente mediante DELETE /api/v1/simulaciones/{id}.
+ * 
+ * @param {number|string} id Identificador de la simulación a eliminar
+ * @param {number} [timeoutMs=3500]
+ * @returns {Promise<boolean>} True si la eliminación fue exitosa
+ */
+export async function eliminarSimulacionAPI(id, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  if (!id) throw new Error('Se requiere un ID de simulación válido.');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const url = `${API_BASE_URL}/simulaciones/${id}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+
+    if (!response.ok && response.status !== 204) {
+      const detalle = await extraerMensajeError(response);
+      throw new Error(detalle);
+    }
+
+    return true;
+
+  } catch (err) {
+    clearTimeout(timer);
+
+    if (err.name === 'AbortError') {
+      throw new Error(`Timeout al eliminar la simulación #${id}.`);
+    }
+
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      throw new Error(`Servidor inalcanzable al eliminar la simulación #${id}.`);
+    }
+
+    throw err;
+  }
+}
+
+/**
+ * Obtiene el catálogo de presets clásicos desde GET /api/v1/presets.
+ * 
+ * @param {number} [timeoutMs=2500]
+ * @returns {Promise<Array<Object>>} Lista de presets disponibles en el backend
+ */
+export async function obtenerPresetsAPI(timeoutMs = 2500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const url = `${API_BASE_URL}/presets`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+
+    if (!response.ok) {
+      const detalle = await extraerMensajeError(response);
+      throw new Error(detalle);
+    }
+
+    const lista = await response.json();
+    return Array.isArray(lista) ? lista : [];
+
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
 }
 
 /**
@@ -177,7 +447,6 @@ export async function verificarConexionBackend(timeoutMs = 1800) {
   const t0 = performance.now();
 
   try {
-    // Intentar consultar el endpoint de presets o la raíz de la API
     const res = await fetch(`${API_BASE_URL}/presets`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },

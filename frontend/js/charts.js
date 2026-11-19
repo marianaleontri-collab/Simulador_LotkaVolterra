@@ -453,21 +453,36 @@ export function actualizarGraficas(serie, params, estadisticas, visualOptions = 
 }
 
 /**
- * Destruye con seguridad las instancias de Chart.js para liberar memoria y evitar memory leaks.
+ * Destruye con seguridad las instancias de Chart.js para liberar memoria y evitar memory leaks o gráficos superpuestos.
  */
 export function destruirGraficas() {
+  if (typeof window !== 'undefined' && window.Chart) {
+    try {
+      const c1 = window.Chart.getChart('timeSeriesChart');
+      if (c1) c1.destroy();
+    } catch (_) {}
+    try {
+      const c2 = window.Chart.getChart('phaseSpaceChart');
+      if (c2) c2.destroy();
+    } catch (_) {}
+  }
   if (timeSeriesChartInstance) {
-    timeSeriesChartInstance.destroy();
+    try {
+      timeSeriesChartInstance.destroy();
+    } catch (_) {}
     timeSeriesChartInstance = null;
   }
   if (phaseSpaceChartInstance) {
-    phaseSpaceChartInstance.destroy();
+    try {
+      phaseSpaceChartInstance.destroy();
+    } catch (_) {}
     phaseSpaceChartInstance = null;
   }
 }
 
 /**
- * Exporta el contenido de un canvas de gráfica como imagen en formato PNG de alta resolución.
+ * Exporta el contenido de un canvas de gráfica como imagen en formato PNG de alta resolución
+ * con fondo oscuro integrado para preservar la visibilidad de los ejes y datos.
  * 
  * @param {string} canvasId ID del elemento canvas
  * @param {string} [nombreArchivo='ecoflux_grafica.png'] Nombre del archivo descargado
@@ -479,12 +494,37 @@ export function exportarGraficaComoImagen(canvasId, nombreArchivo = 'ecoflux_gra
     return;
   }
 
-  // Generar URL base64 de la imagen renderizada
-  const dataUrl = canvas.toDataURL('image/png', 1.0);
-  const link = document.createElement('a');
-  link.download = nombreArchivo;
-  link.href = dataUrl;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    // Crear un canvas temporal con las mismas dimensiones para asegurar fondo oscuro
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    if (tempCtx) {
+      // Pintar fondo oscuro idéntico al panel (#090d16 / #020617)
+      tempCtx.fillStyle = '#090d16';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.drawImage(canvas, 0, 0);
+
+      const dataUrl = tempCanvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.download = nombreArchivo;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Fallback directo sobre el canvas original
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.download = nombreArchivo;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } catch (err) {
+    console.error(`Error al exportar la gráfica ${canvasId} como imagen:`, err);
+  }
 }

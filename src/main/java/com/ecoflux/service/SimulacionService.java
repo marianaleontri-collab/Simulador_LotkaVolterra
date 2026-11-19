@@ -7,9 +7,13 @@ import com.ecoflux.dto.SimulacionRequestDTO;
 import com.ecoflux.dto.SimulacionResponseDTO;
 import com.ecoflux.dto.SimulacionResumenDTO;
 import com.ecoflux.exception.RecursoNoEncontradoException;
+import com.ecoflux.model.EcosistemaEntity;
+import com.ecoflux.repository.EcosistemaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -17,10 +21,35 @@ public class SimulacionService {
 
     private final MotorLotkaVolterra motorLotkaVolterra;
     private final EcosistemaPersistencePort persistencePort;
+    private final EcosistemaRepository ecosistemaRepository;
 
-    public SimulacionService(MotorLotkaVolterra motorLotkaVolterra, EcosistemaPersistencePort persistencePort) {
+    public SimulacionService(MotorLotkaVolterra motorLotkaVolterra,
+                             EcosistemaPersistencePort persistencePort,
+                             @Autowired(required = false) EcosistemaRepository ecosistemaRepository) {
         this.motorLotkaVolterra = motorLotkaVolterra;
         this.persistencePort = persistencePort;
+        this.ecosistemaRepository = ecosistemaRepository;
+    }
+
+    /**
+     * Limita de forma segura la cantidad de puntos devueltos al cliente para no
+     * saturar el navegador ni la capa gráfica cuando tiempoTotal / pasoTiempo > 10000.
+     */
+    public List<PuntoTiempoDTO> limitarPuntosSeguro(List<PuntoTiempoDTO> serie, int maxPuntos) {
+        if (serie == null || serie.size() <= maxPuntos) {
+            return serie;
+        }
+        int total = serie.size();
+        int paso = (int) Math.ceil((double) total / maxPuntos);
+        List<PuntoTiempoDTO> reducida = new ArrayList<>(maxPuntos + 2);
+        for (int i = 0; i < total; i += paso) {
+            reducida.add(serie.get(i));
+        }
+        PuntoTiempoDTO ultimo = serie.get(total - 1);
+        if (!reducida.get(reducida.size() - 1).equals(ultimo)) {
+            reducida.add(ultimo);
+        }
+        return reducida;
     }
 
     /**
@@ -29,6 +58,7 @@ public class SimulacionService {
     public SimulacionResponseDTO calcular(SimulacionRequestDTO params) {
         List<PuntoTiempoDTO> serie = motorLotkaVolterra.resolver(params);
         EstadisticasDTO estadisticas = calcularEstadisticas(serie, params);
+        List<PuntoTiempoDTO> serieSegura = limitarPuntosSeguro(serie, 10000);
 
         return new SimulacionResponseDTO(
                 null,
@@ -38,7 +68,7 @@ public class SimulacionService {
                 LocalDateTime.now(),
                 params,
                 estadisticas,
-                serie
+                serieSegura
         );
     }
 
@@ -61,6 +91,7 @@ public class SimulacionService {
         );
 
         EcosistemaRegistro guardado = persistencePort.guardar(registro);
+        List<PuntoTiempoDTO> serieSegura = limitarPuntosSeguro(serie, 10000);
 
         return new SimulacionResponseDTO(
                 guardado.id(),
@@ -70,7 +101,7 @@ public class SimulacionService {
                 guardado.fechaCreacion(),
                 guardado.parametros(),
                 guardado.estadisticas(),
-                serie
+                serieSegura
         );
     }
 
@@ -99,6 +130,7 @@ public class SimulacionService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("No se encontró el ecosistema con ID: " + id));
 
         List<PuntoTiempoDTO> serie = motorLotkaVolterra.resolver(registro.parametros());
+        List<PuntoTiempoDTO> serieSegura = limitarPuntosSeguro(serie, 10000);
 
         return new SimulacionResponseDTO(
                 registro.id(),
@@ -108,7 +140,7 @@ public class SimulacionService {
                 registro.fechaCreacion(),
                 registro.parametros(),
                 registro.estadisticas(),
-                serie
+                serieSegura
         );
     }
 
@@ -123,80 +155,140 @@ public class SimulacionService {
     }
 
     /**
-     * Devuelve los 4 presets de ecosistemas clásicos preconfigurados.
+     * Devuelve los 4 presets de ecosistemas clásicos preconfigurados consultados desde PostgreSQL
+     * a través de EcosistemaRepository (con fallback si la base de datos no tiene datos).
      */
     public List<PresetDTO> obtenerPresets() {
+        if (ecosistemaRepository != null) {
+            try {
+                List<EcosistemaEntity> presetsDb = ecosistemaRepository.findByEsPresetTrue();
+                if (presetsDb != null && !presetsDb.isEmpty()) {
+                    return presetsDb.stream()
+                            .map(this::convertirEntityAPresetDTO)
+                            .toList();
+                }
+            } catch (Exception ignored) {
+                // Si la BD no está disponible, continúa con el fallback
+            }
+        }
+        return presetsFallback();
+    }
+
+    private PresetDTO convertirEntityAPresetDTO(EcosistemaEntity e) {
+        String slug = e.getNombreEcosistema().toLowerCase()
+                .replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-|-$", "");
+
+        String id = switch (slug) {
+            case "lince-y-liebre-clasico-canada", "lince-y-liebre" -> "lince-liebre";
+            case "equilibrio-armonico" -> "equilibrio-armonico";
+            case "al-borde-de-la-extincion" -> "al-borde-de-la-extincion";
+            case "sabana-africana-gacelas-y-leones" -> "sabana-africana";
+            default -> slug;
+        };
+
+        String descripcion = switch (id) {
+            case "lince-liebre" ->
+                    "Oscilación periódica sostenida clásica entre presa y depredador en el bosque boreal canadiense.";
+            case "equilibrio-armonico" ->
+                    "Órbita periódica cerrada conservativa alrededor del punto de equilibrio no trivial con conservación de V(x,y).";
+            case "al-borde-de-la-extincion" ->
+                    "Depredación intensiva donde las presas caen a niveles críticos bordeando la extinción biológica.";
+            case "sabana-africana" ->
+                    "Dinámica de sabana con gacelas y leones en interacción periódica estable.";
+            default -> "Preset ecológico preconfigurado para el modelo Lotka-Volterra.";
+        };
+
+        SimulacionRequestDTO params = new SimulacionRequestDTO(
+                e.getNombreEcosistema(),
+                e.getNombrePresa(),
+                e.getNombreDepredador(),
+                e.getPoblacionInicialPresas(),
+                e.getPoblacionInicialDepredadores(),
+                e.getAlfa(),
+                e.getBeta(),
+                e.getDelta(),
+                e.getGamma(),
+                e.getTiempoTotal(),
+                e.getPasoTiempo()
+        );
+
+        return new PresetDTO(id, e.getNombreEcosistema(), descripcion, params);
+    }
+
+    private List<PresetDTO> presetsFallback() {
         return List.of(
                 new PresetDTO(
                         "lince-liebre",
-                        "Lince y Liebre",
-                        "Oscilación periódica sostenida clásica entre presa y depredador en el bosque boreal.",
+                        "Lince y Liebre (Clásico Canadá)",
+                        "Oscilación periódica sostenida clásica entre presa y depredador en el bosque boreal canadiense.",
                         new SimulacionRequestDTO(
-                                "Lince y Liebre del Boreal",
+                                "Lince y Liebre (Clásico Canadá)",
                                 "Liebres",
                                 "Linces",
-                                80.0,
+                                40.0,
+                                9.0,
+                                0.55,
+                                0.028,
+                                0.024,
+                                0.84,
+                                50.0,
+                                0.05
+                        )
+                ),
+                new PresetDTO(
+                        "equilibrio-armonico",
+                        "Equilibrio Armónico",
+                        "Órbita periódica cerrada conservativa alrededor del punto de equilibrio no trivial con conservación de V(x,y).",
+                        new SimulacionRequestDTO(
+                                "Equilibrio Armónico",
+                                "Presas",
+                                "Depredadores",
+                                100.0,
                                 20.0,
                                 0.1,
-                                0.02,
-                                0.01,
-                                0.1,
+                                0.002,
+                                0.001,
+                                0.05,
                                 200.0,
                                 0.05
                         )
                 ),
                 new PresetDTO(
-                        "equilibrio-estable",
-                        "Equilibrio Estable",
-                        "Poblaciones fijadas exactamente en el punto de equilibrio no trivial (gamma/delta y alfa/beta).",
+                        "al-borde-de-la-extincion",
+                        "Al Borde de la Extinción",
+                        "Depredación intensiva donde las presas caen a niveles críticos bordeando la extinción biológica.",
                         new SimulacionRequestDTO(
-                                "Sabana en Equilibrio",
-                                "Gacelas",
-                                "Guepardos",
-                                10.0,
-                                10.0,
+                                "Al Borde de la Extinción",
+                                "Presas",
+                                "Depredadores",
+                                120.0,
+                                45.0,
                                 0.4,
-                                0.04,
-                                0.02,
-                                0.2,
+                                0.015,
+                                0.01,
+                                0.3,
                                 100.0,
                                 0.05
                         )
                 ),
                 new PresetDTO(
-                        "colapso-sobredepredacion",
-                        "Colapso por Sobredepredación",
-                        "Depredación intensiva donde las presas caen a niveles críticos bordeando la extinción biológica.",
+                        "sabana-africana",
+                        "Sabana Africana (Gacelas y Leones)",
+                        "Dinámica de sabana con gacelas y leones en interacción periódica estable.",
                         new SimulacionRequestDTO(
-                                "Arrecife en Colapso",
-                                "Peces Herbívoros",
-                                "Tiburones de Arrecife",
-                                30.0,
-                                25.0,
-                                0.15,
-                                0.05,
-                                0.03,
-                                0.05,
-                                150.0,
-                                0.05
-                        )
-                ),
-                new PresetDTO(
-                        "ciclo-rapido",
-                        "Ciclo Rápido",
-                        "Especies con alta tasa de renovación y crecimiento acelerado con oscilaciones frecuentes.",
-                        new SimulacionRequestDTO(
-                                "Pradera de Roedores",
-                                "Ratones de Campo",
-                                "Búhos",
+                                "Sabana Africana (Gacelas y Leones)",
+                                "Gacelas",
+                                "Leones",
+                                200.0,
                                 15.0,
-                                8.0,
-                                1.2,
-                                0.6,
-                                0.3,
-                                0.8,
-                                50.0,
-                                0.02
+                                0.25,
+                                0.004,
+                                0.002,
+                                0.15,
+                                150.0,
+                                0.1
                         )
                 )
         );
@@ -207,8 +299,8 @@ public class SimulacionService {
      */
     EstadisticasDTO calcularEstadisticas(List<PuntoTiempoDTO> serie, SimulacionRequestDTO p) {
         if (serie == null || serie.isEmpty()) {
-            double eqPresas = p.gamma() / p.delta();
-            double eqDepredadores = p.alfa() / p.beta();
+            double eqPresas = p.delta() > 0 ? p.gamma() / p.delta() : 0.0;
+            double eqDepredadores = p.beta() > 0 ? p.alfa() / p.beta() : 0.0;
             return new EstadisticasDTO(
                     p.poblacionInicialPresas(), p.poblacionInicialPresas(),
                     p.poblacionInicialDepredadores(), p.poblacionInicialDepredadores(),
@@ -237,8 +329,8 @@ public class SimulacionService {
             }
         }
 
-        double puntoEqPresas = p.gamma() / p.delta();
-        double puntoEqDepredadores = p.alfa() / p.beta();
+        double puntoEqPresas = p.delta() > 0 ? p.gamma() / p.delta() : 0.0;
+        double puntoEqDepredadores = p.beta() > 0 ? p.alfa() / p.beta() : 0.0;
 
         return new EstadisticasDTO(
                 redondear(maxP),

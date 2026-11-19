@@ -39,7 +39,7 @@ INSERT INTO ecosistemas (
     0.001,
     0.05,
     200.0,
-    0.1,
+    0.05,
     TRUE,
     FALSE
 ),

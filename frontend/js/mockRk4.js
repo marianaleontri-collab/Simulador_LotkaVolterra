@@ -171,13 +171,13 @@ export function simularLotkaVolterra(params) {
   let x = p.poblacionInicialPresas;
   let y = p.poblacionInicialDepredadores;
 
-  // Punto inicial en t = 0
+  // Punto inicial en t = 0 (valores completos de doble precisión sin toFixed para paridad estricta < 1e-6 con Java)
   serie[0] = {
     paso: 0,
     tiempo: 0.0,
-    presas: Number(x.toFixed(4)),
-    depredadores: Number(y.toFixed(4)),
-    conservada: Number(cantidadConservada(p, x, y).toFixed(5))
+    presas: x,
+    depredadores: y,
+    conservada: cantidadConservada(p, x, y)
   };
 
   // Iteración temporal
@@ -186,16 +186,28 @@ export function simularLotkaVolterra(params) {
     x = siguiente[0];
     y = siguiente[1];
 
-    // Se calcula t = i * h (no acumulado) para no arrastrar error numérico
-    const tActual = Number((i * h).toFixed(4));
-
     serie[i] = {
       paso: i,
-      tiempo: tActual,
-      presas: Number(x.toFixed(4)),
-      depredadores: Number(y.toFixed(4)),
-      conservada: Number(cantidadConservada(p, x, y).toFixed(5))
+      tiempo: i * h,
+      presas: x,
+      depredadores: y,
+      conservada: cantidadConservada(p, x, y)
     };
+  }
+
+  // Protección de rendimiento: Si excede 10,000 pasos, submuestrear para no congelar Chart.js ni la UI
+  const MAX_PUNTOS = 10000;
+  if (serie.length > MAX_PUNTOS) {
+    const factor = Math.ceil(serie.length / MAX_PUNTOS);
+    const subserie = [];
+    for (let i = 0; i < serie.length; i += factor) {
+      subserie.push(serie[i]);
+    }
+    const ultimoPunto = serie[serie.length - 1];
+    if (subserie[subserie.length - 1] !== ultimoPunto) {
+      subserie.push(ultimoPunto);
+    }
+    return subserie;
   }
 
   return serie;
